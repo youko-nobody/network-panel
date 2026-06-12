@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.2 - 2026-06-12
+
+- Fix theme switching so all built-in themes can be selected.
+- Improve theme-aware header button contrast.
+- Replace the heavy autumn palette with a lighter autumn theme.
+- Add per-route edit and delete actions in route management.
+- Improve alignment for route name and URL input fields.
+
 ## 1.0.1 - 2026-06-12
 
 - Align the release tag with the latest README download link.

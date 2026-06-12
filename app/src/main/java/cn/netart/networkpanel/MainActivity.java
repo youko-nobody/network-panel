@@ -91,7 +91,7 @@ TrafficRunnerService.Listener {
     private View foreignLatencyRow;
     private TextView foreignLatencyText;
     private TextView foreignLatencyRegionText;
-    private TextView targetListText;
+    private LinearLayout targetListContainer;
     private TextView latencyText;
     private TextView downloadResultText;
     private TextView uploadResultText;
@@ -426,7 +426,7 @@ TrafficRunnerService.Listener {
         panel.setPadding(this.dp(16), this.dp(10), this.dp(16), this.dp(16));
         panel.setBackground(this.panelBackground());
         AlertDialog[] dialogRef = new AlertDialog[1];
-        for (int i = 0; i < 10; ++i) {
+        for (int i = 0; i < AppPrefs.THEME_COUNT; ++i) {
             int themeId = i;
             panel.addView(this.choiceRow(this.themeChoiceName(i), this.themeChoiceDesc(i), i == this.currentThemeId, v -> {
                 if (dialogRef[0] != null) {
@@ -551,14 +551,14 @@ TrafficRunnerService.Listener {
         LinearLayout panel = this.vertical();
         panel.setBackground(this.sectionBackground());
         panel.setPadding(this.dp(14), this.dp(12), this.dp(14), this.dp(12));
-        this.targetListText = this.text("", 13, this.MUTED, 0);
-        panel.addView((View)this.targetListText, (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(-1, -2));
+        this.targetListContainer = this.vertical();
+        panel.addView((View)this.targetListContainer, (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(-1, -2));
         this.linkNameEdit = this.input("\u540d\u79f0\uff0c\u4f8b\u5982\uff1a\u54aa\u5495\u89c6\u9891 / Cloudflare");
         this.linkUrlEdit = this.input("\u4efb\u610f HTTP/HTTPS \u4e0b\u8f7d\u94fe\u63a5");
         panel.addView((View)this.label("\u540d\u79f0"), (ViewGroup.LayoutParams)this.topMargin(10));
-        panel.addView((View)this.linkNameEdit, (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(-1, this.dp(50)));
+        panel.addView((View)this.linkNameEdit, (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(-1, this.dp(52)));
         panel.addView((View)this.label("\u94fe\u63a5"), (ViewGroup.LayoutParams)this.topMargin(10));
-        panel.addView((View)this.linkUrlEdit, (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(-1, this.dp(50)));
+        panel.addView((View)this.linkUrlEdit, (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(-1, this.dp(52)));
         LinearLayout buttons = new LinearLayout((Context)this);
         buttons.setOrientation(0);
         panel.addView((View)buttons, (ViewGroup.LayoutParams)this.topMargin(12));
@@ -936,9 +936,15 @@ TrafficRunnerService.Listener {
     }
 
     private void refreshTargetList() {
-        StringBuilder builder = new StringBuilder();
+        if (this.targetListContainer == null) {
+            this.refreshTargetSpinner();
+            return;
+        }
+        this.targetListContainer.removeAllViews();
         if (this.targets.isEmpty()) {
-            builder.append("\u6682\u65e0\u94fe\u63a5\uff0c\u8bf7\u6dfb\u52a0\u4e00\u4e2a\u4e0b\u8f7d\u94fe\u63a5\u3002");
+            TextView empty = this.text("\u6682\u65e0\u94fe\u63a5\uff0c\u8bf7\u6dfb\u52a0\u4e00\u4e2a\u4e0b\u8f7d\u94fe\u63a5\u3002", 13, this.MUTED, 0);
+            empty.setPadding(this.dp(2), this.dp(2), this.dp(2), this.dp(6));
+            this.targetListContainer.addView((View)empty, (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(-1, -2));
             this.refreshTargetSpinner();
         } else {
             this.activeTargetIndex = TrafficPrefs.readActiveIndex((Context)this, this.targets.size());
@@ -946,21 +952,151 @@ TrafficRunnerService.Listener {
             this.currentThreadValue = selected.threads;
             this.refreshTargetSpinner();
             for (int i = 0; i < this.targets.size(); ++i) {
-                TrafficTarget target = this.targets.get(i);
-                if (i == this.activeTargetIndex) {
-                    builder.append("\u25b6 ");
-                }
-                builder.append(i + 1).append(". ").append(target.enabled ? "\u542f\u7528 " : "\u505c\u7528 ").append(target.displayName()).append(" \u00b7 ").append(target.threads).append("\u7ebf\u7a0b");
-                if (target.enhanced) {
-                    builder.append(" \u00b7 \u589e\u5f3a\u5e76\u53d1");
-                }
-                builder.append("\n").append("   ").append(target.url);
-                if (i == this.targets.size() - 1) continue;
-                builder.append("\n\n");
+                LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(-1, -2);
+                rowParams.topMargin = i == 0 ? 0 : this.dp(8);
+                this.targetListContainer.addView(this.targetRow(i), (ViewGroup.LayoutParams)rowParams);
             }
         }
-        if (this.targetListText != null) {
-            this.targetListText.setText((CharSequence)builder.toString());
+        if (this.trafficWorkersText != null) {
+            this.updateMetric(this.trafficWorkersText, this.targets.isEmpty() ? "--" : this.currentThreadValue + " \u7ebf\u7a0b");
+        }
+    }
+
+    private View targetRow(final int index) {
+        final TrafficTarget target = this.targets.get(index);
+        boolean selected = index == this.activeTargetIndex;
+        LinearLayout row = this.vertical();
+        row.setBackground(selected ? this.selectedChoiceBackground() : this.showItemBackground());
+        row.setPadding(this.dp(12), this.dp(10), this.dp(12), this.dp(10));
+        row.setClickable(true);
+        row.setOnClickListener(v -> this.selectTarget(index));
+        LinearLayout top = new LinearLayout((Context)this);
+        top.setOrientation(0);
+        top.setGravity(16);
+        row.addView((View)top, (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(-1, -2));
+        TextView title = this.text((index + 1) + ". " + target.displayName(), 14, this.TEXT, 1);
+        title.setSingleLine(true);
+        title.setEllipsize(TextUtils.TruncateAt.END);
+        top.addView((View)title, (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(0, -2, 1.0f));
+        if (selected) {
+            TextView current = this.text("\u5f53\u524d", 11, this.theme.primary, 1);
+            current.setGravity(17);
+            current.setPadding(this.dp(9), this.dp(3), this.dp(9), this.dp(3));
+            current.setBackground(this.chipBackground());
+            LinearLayout.LayoutParams currentParams = new LinearLayout.LayoutParams(-2, -2);
+            currentParams.leftMargin = this.dp(6);
+            top.addView((View)current, (ViewGroup.LayoutParams)currentParams);
+        }
+        TextView edit = this.targetAction("\u7f16\u8f91", this.theme.primary);
+        LinearLayout.LayoutParams editParams = new LinearLayout.LayoutParams(-2, this.dp(30));
+        editParams.leftMargin = this.dp(6);
+        top.addView((View)edit, (ViewGroup.LayoutParams)editParams);
+        TextView delete = this.targetAction("\u5220\u9664", this.theme.danger);
+        LinearLayout.LayoutParams deleteParams = new LinearLayout.LayoutParams(-2, this.dp(30));
+        deleteParams.leftMargin = this.dp(6);
+        top.addView((View)delete, (ViewGroup.LayoutParams)deleteParams);
+        edit.setOnClickListener(v -> this.showEditTargetDialog(index));
+        delete.setOnClickListener(v -> this.confirmDeleteTarget(index));
+        String detail = (target.enabled ? "\u542f\u7528" : "\u505c\u7528") + " \u00b7 " + target.threads + "\u7ebf\u7a0b" + (target.enhanced ? " \u00b7 \u589e\u5f3a\u5e76\u53d1" : "");
+        TextView detailView = this.text(detail, 12, selected ? this.theme.secondary : this.MUTED, 1);
+        detailView.setSingleLine(true);
+        detailView.setEllipsize(TextUtils.TruncateAt.END);
+        LinearLayout.LayoutParams detailParams = new LinearLayout.LayoutParams(-1, -2);
+        detailParams.topMargin = this.dp(5);
+        row.addView((View)detailView, (ViewGroup.LayoutParams)detailParams);
+        TextView urlView = this.text(target.url == null ? "" : target.url, 12, selected ? this.theme.secondary : this.MUTED, 0);
+        urlView.setSingleLine(true);
+        urlView.setEllipsize(TextUtils.TruncateAt.END);
+        LinearLayout.LayoutParams urlParams = new LinearLayout.LayoutParams(-1, -2);
+        urlParams.topMargin = this.dp(2);
+        row.addView((View)urlView, (ViewGroup.LayoutParams)urlParams);
+        return row;
+    }
+
+    private TextView targetAction(String text, int color) {
+        TextView button = this.text(text, 12, color, 1);
+        button.setGravity(17);
+        button.setClickable(true);
+        button.setMinWidth(this.dp(48));
+        button.setPadding(this.dp(10), 0, this.dp(10), 0);
+        button.setBackground(this.chipBackground());
+        return button;
+    }
+
+    private void showEditTargetDialog(final int index) {
+        if (index < 0 || index >= this.targets.size()) {
+            return;
+        }
+        TrafficTarget target = this.targets.get(index);
+        LinearLayout content = this.vertical();
+        final EditText nameEdit = this.input("\u540d\u79f0");
+        nameEdit.setText((CharSequence)(target.name == null ? "" : target.name));
+        final EditText urlEdit = this.input("\u94fe\u63a5");
+        urlEdit.setText((CharSequence)(target.url == null ? "" : target.url));
+        content.addView((View)this.label("\u540d\u79f0"), (ViewGroup.LayoutParams)this.topMargin(0));
+        content.addView((View)nameEdit, (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(-1, this.dp(52)));
+        content.addView((View)this.label("\u94fe\u63a5"), (ViewGroup.LayoutParams)this.topMargin(10));
+        content.addView((View)urlEdit, (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(-1, this.dp(52)));
+        this.showActionDialog("\u7f16\u8f91\u7ebf\u8def", (View)content, () -> {
+            String url = this.clean(urlEdit);
+            if (url.isEmpty()) {
+                Toast.makeText((Context)this, (CharSequence)"\u8bf7\u8f93\u5165\u94fe\u63a5", (int)0).show();
+                return;
+            }
+            if (index < 0 || index >= this.targets.size()) {
+                return;
+            }
+            TrafficTarget old = this.targets.get(index);
+            this.targets.set(index, new TrafficTarget(this.clean(nameEdit), url, old.threads, old.enhanced, old.enabled));
+            TrafficPrefs.writeTargets((Context)this, this.targets);
+            this.refreshTargetList();
+            this.appendLog("\u5df2\u7f16\u8f91\u7ebf\u8def\uff1a" + url);
+            if (this.trafficRunning && index == this.activeTargetIndex) {
+                this.service("cn.netart.networkpanel.TRAFFIC_SWITCH");
+            }
+        });
+    }
+
+    private void confirmDeleteTarget(final int index) {
+        if (index < 0 || index >= this.targets.size()) {
+            return;
+        }
+        TrafficTarget target = this.targets.get(index);
+        AlertDialog dialog = new AlertDialog.Builder((Context)this)
+                .setTitle((CharSequence)"\u5220\u9664\u7ebf\u8def")
+                .setMessage((CharSequence)("\u786e\u5b9a\u5220\u9664\u300c" + target.displayName() + "\u300d\u5417\uff1f"))
+                .setNegativeButton((CharSequence)"\u53d6\u6d88", null)
+                .setPositiveButton((CharSequence)"\u5220\u9664", (dialogInterface, which) -> this.deleteTarget(index))
+                .show();
+        Window window = dialog.getWindow();
+        if (window != null) {
+            window.setBackgroundDrawable((Drawable)new ColorDrawable(this.theme.surface));
+        }
+    }
+
+    private void deleteTarget(int index) {
+        if (index < 0 || index >= this.targets.size()) {
+            return;
+        }
+        TrafficTarget removed = this.targets.remove(index);
+        if (this.targets.isEmpty()) {
+            this.activeTargetIndex = 0;
+            if (this.trafficRunning) {
+                this.service("cn.netart.networkpanel.TRAFFIC_PAUSE");
+            }
+        } else {
+            if (index < this.activeTargetIndex) {
+                --this.activeTargetIndex;
+            } else if (this.activeTargetIndex >= this.targets.size()) {
+                this.activeTargetIndex = this.targets.size() - 1;
+            }
+        }
+        TrafficPrefs.writeTargets((Context)this, this.targets);
+        TrafficPrefs.writeActiveIndex((Context)this, this.activeTargetIndex);
+        this.refreshTargetList();
+        this.appendLog("\u5df2\u5220\u9664\u7ebf\u8def\uff1a" + removed.displayName());
+        if (this.trafficRunning && !this.targets.isEmpty()) {
+            this.service("cn.netart.networkpanel.TRAFFIC_SWITCH");
         }
     }
 
@@ -1338,7 +1474,7 @@ TrafficRunnerService.Listener {
     }
 
     private void cycleTheme() {
-        AppPrefs.writeTheme((Context)this, (this.currentThemeId + 1) % 10);
+        AppPrefs.writeTheme((Context)this, (this.currentThemeId + 1) % AppPrefs.THEME_COUNT);
         this.recreate();
     }
 
@@ -1354,7 +1490,7 @@ TrafficRunnerService.Listener {
                 return new ThemePalette("\u7c89", false, this.rgb("#FFF3F6"), this.rgb("#EEF5FF"), this.rgb("#FFFFFF"), this.rgb("#FBF7FA"), this.rgb("#1E293B"), this.rgb("#667085"), this.rgb("#9AA6B5"), this.rgb("#D85C8A"), this.rgb("#5B8FC9"), this.rgb("#4C9F70"), this.rgb("#D95B68"), this.rgb("#E7DDE5"), this.rgb("#DCE5EF"), this.rgb("#8A7280"), this.rgb("#FFF8FB"), this.rgb("#EEF9F2"), this.rgb("#C9E7D4"), this.rgb("#FFFFFF"), this.rgb("#F0F6FF"), this.rgb("#D85C8A"), this.rgb("#6F9FD8"), this.rgb("#F06A9B"), this.rgb("#6E8FE5"), this.rgb("#FFFFFF"));
             }
             case 4: {
-                return new ThemePalette("\u79cb", false, this.rgb("#FFE3A3"), this.rgb("#D86A2D"), this.rgb("#FFF7E6"), this.rgb("#FFE9B8"), this.rgb("#2A160D"), this.rgb("#7A4522"), this.rgb("#B8793B"), this.rgb("#C2410C"), this.rgb("#617A2E"), this.rgb("#3F7A2E"), this.rgb("#B42318"), this.rgb("#E9A95A"), this.rgb("#D88B42"), this.rgb("#8B5A2B"), this.rgb("#FFF0C2"), this.rgb("#EAF5D7"), this.rgb("#A7C774"), this.rgb("#FFE2A0"), this.rgb("#F59E0B"), this.rgb("#F97316"), this.rgb("#C2410C"), this.rgb("#B42318"), this.rgb("#7C2D12"), this.rgb("#FFFDF8"));
+                return new ThemePalette("\u79cb", false, this.rgb("#FFF7E6"), this.rgb("#FDEDD3"), this.rgb("#FFFFFF"), this.rgb("#FFF8ED"), this.rgb("#2D2218"), this.rgb("#7C6A55"), this.rgb("#B79C78"), this.rgb("#B7791F"), this.rgb("#C0842B"), this.rgb("#5F8A45"), this.rgb("#C75A45"), this.rgb("#E8D7BE"), this.rgb("#EADDCB"), this.rgb("#9B8469"), this.rgb("#FFF9EB"), this.rgb("#F3F9E8"), this.rgb("#CFE5B5"), this.rgb("#FFF1C7"), this.rgb("#F8D98A"), this.rgb("#F6B45C"), this.rgb("#D98A2B"), this.rgb("#E97451"), this.rgb("#C45A35"), this.rgb("#FFFFFF"));
             }
             case 5: {
                 return new ThemePalette("\u6d77", false, this.rgb("#EAFBFF"), this.rgb("#DFF7EF"), this.rgb("#FFFFFF"), this.rgb("#F2FCFA"), this.rgb("#123038"), this.rgb("#5C7880"), this.rgb("#8AA4AA"), this.rgb("#0E7490"), this.rgb("#0D9488"), this.rgb("#16A34A"), this.rgb("#E11D48"), this.rgb("#CBEAF0"), this.rgb("#D6EEF2"), this.rgb("#6E8A92"), this.rgb("#E8F9F7"), this.rgb("#ECFDF5"), this.rgb("#A7F3D0"), this.rgb("#CCFBF1"), this.rgb("#BAE6FD"), this.rgb("#06B6D4"), this.rgb("#14B8A6"), this.rgb("#0EA5E9"), this.rgb("#10B981"), this.rgb("#FFFFFF"));
@@ -1458,7 +1594,7 @@ TrafficRunnerService.Listener {
                 return "\u7c89\u84dd";
             }
             case 4: {
-                return "\u79cb\u53f6";
+                return "\u6d45\u79cb";
             }
             case 5: {
                 return "\u6d77\u76d0\u8584\u8377";
@@ -1491,7 +1627,7 @@ TrafficRunnerService.Listener {
                 return "\u6d45\u7c89\u4e0e\u96fe\u84dd";
             }
             case 4: {
-                return "\u67ab\u53f6\u6a59\u3001\u843d\u65e5\u91d1\u548c\u6df1\u6817\u68d5";
+                return "\u6de1\u674f\u9ec4\u3001\u9ea6\u7a57\u91d1\u548c\u67d4\u548c\u67ab\u6a59";
             }
             case 5: {
                 return "\u6d45\u8272\u6e05\u51c9\uff0c\u6d77\u76d0\u767d\u3001\u8584\u8377\u7eff\u548c\u6d45\u6c34\u84dd";
@@ -1876,6 +2012,11 @@ TrafficRunnerService.Listener {
         edit.setHint((CharSequence)hint);
         edit.setInputType(16);
         edit.setImeOptions(6);
+        edit.setGravity(16);
+        edit.setPadding(this.dp(14), 0, this.dp(14), 0);
+        edit.setIncludeFontPadding(false);
+        edit.setMinHeight(0);
+        edit.setMinimumHeight(0);
         edit.setBackground(this.inputBackground());
         return edit;
     }
@@ -1917,7 +2058,7 @@ TrafficRunnerService.Listener {
         button.setText((CharSequence)text);
         button.setAllCaps(false);
         button.setTextSize(11.0f);
-        button.setTextColor(this.theme.onPrimary);
+        button.setTextColor(this.theme.primary);
         button.setTypeface(Typeface.DEFAULT, 1);
         button.setBackground(this.chipBackground());
         this.styleFlatButton(button, 8, 8, 8);
