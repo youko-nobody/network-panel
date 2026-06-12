@@ -1,0 +1,27 @@
+/.gradle/
+/build/
+/app/build/
+/release/
+/reference_apk/
+/reference_web/
+/recovered_src/
+
+local.properties
+cfr.jar
+
+*.apk
+*.aab
+*.jks
+*.keystore
+*.iml
+*.log
+
+.idea/
+
+# Local screenshots and design scratch files.
+/*.png
+/*.jpg
+/*.jpeg
+/*.webp
+/*.html
+/*.xml

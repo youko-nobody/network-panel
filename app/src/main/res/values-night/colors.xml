@@ -1,0 +1,22 @@
+<resources>
+    <color name="panel_bg">#0B1220</color>
+    <color name="panel_surface">#111827</color>
+    <color name="panel_surface_alt">#172033</color>
+    <color name="panel_text">#E8EEF7</color>
+    <color name="panel_muted">#A7B4C7</color>
+    <color name="panel_hint">#8392A8</color>
+    <color name="panel_blue">#0F172A</color>
+    <color name="panel_accent_blue">#60A5FA</color>
+    <color name="panel_accent_cyan">#22D3EE</color>
+    <color name="panel_success">#4ADE80</color>
+    <color name="panel_success_bg">#14261E</color>
+    <color name="panel_success_line">#245B3C</color>
+    <color name="panel_warning">#FBBF24</color>
+    <color name="panel_red">#F87171</color>
+    <color name="panel_line">#27344A</color>
+    <color name="panel_divider">#314157</color>
+    <color name="panel_mark_muted">#B6C0CF</color>
+    <color name="panel_accent_start">#4F46E5</color>
+    <color name="panel_accent_center">#14B8A6</color>
+    <color name="panel_accent_end">#38BDF8</color>
+</resources>
