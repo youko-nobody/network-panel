@@ -6,7 +6,7 @@
 
 游客可以在 GitHub Releases 页面直接下载 APK：
 
-[下载最新版 APK](../../releases/latest)
+[下载最新版 APK](https://github.com/youko-nobody/network-panel/releases/latest)
 
 如果还没有 Release，请先查看 [发布指南](docs/RELEASE.md) 生成并上传正式 APK。
 
