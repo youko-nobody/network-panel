@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.3 - 2026-06-12
+
+- Refine the home dashboard layout with more balanced module sizing.
+- Keep the existing modules compact instead of stretching them to fill the whole screen.
+- Improve spacing around the speed card, usage cards, start button, and region latency card.
+
 ## 1.0.2 - 2026-06-12
 
 - Fix theme switching so all built-in themes can be selected.

@@ -63,29 +63,41 @@ jobs:
       - name: Rename APK
         run: cp app/build/outputs/apk/release/app-release.apk network-panel-${{ github.ref_name }}.apk
 
+      - name: Prepare release notes
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          awk -v version="$VERSION" '
+            $0 ~ "^## " version " - " { capture=1; next }
+            capture && /^## / { exit }
+            capture { print }
+          ' CHANGELOG.md > release-notes-body.md
+          {
+            echo "## 网络面板 ${GITHUB_REF_NAME}"
+            echo
+            echo "原生 Android 网络流量面板正式版。"
+            echo
+            echo "### 更新内容"
+            echo
+            if [ -s release-notes-body.md ]; then
+              cat release-notes-body.md
+            else
+              echo "- 本版本包含稳定性与体验优化。"
+            fi
+            echo
+            echo "### 下载"
+            echo
+            echo "点击下方 \`network-panel-${GITHUB_REF_NAME}.apk\` 即可下载 APK。"
+            echo
+            echo "### 安装说明"
+            echo
+            echo "Android 可能会提示“未知来源应用”，允许后即可安装。"
+          } > release-notes.md
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: network-panel-${{ github.ref_name }}.apk
           name: 网络面板 ${{ github.ref_name }}
-          body: |
-            ## 网络面板 ${{ github.ref_name }}
-
-            原生 Android 网络流量面板正式版。
-
-            ### 更新内容
-
-            - 修复部分主题无法切换的问题
-            - 优化右上角按钮在不同主题下的文字可见性
-            - 将“秋叶”主题替换为更柔和的“浅秋”配色
-            - 线路管理支持单条线路编辑和删除
-            - 优化线路名称和链接输入框的文字对齐
-
-            ### 下载
-
-            点击下方 `network-panel-${{ github.ref_name }}.apk` 即可下载 APK。
-
-            ### 安装说明
-
-            Android 可能会提示“未知来源应用”，允许后即可安装。
+          body_path: release-notes.md
           generate_release_notes: true

@@ -51,9 +51,9 @@ Create `RELEASE_KEYSTORE_BASE64` from the local keystore:
 Then push a version tag:
 
 ```powershell
-git tag v1.0.2
+git tag v1.0.3
 git push origin main
-git push origin v1.0.2
+git push origin v1.0.3
 ```
 
 GitHub Actions will build a signed release APK and attach it to the GitHub Release. Visitors can download the APK directly from the Releases page.

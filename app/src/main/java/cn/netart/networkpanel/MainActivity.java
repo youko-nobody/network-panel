@@ -291,20 +291,20 @@ TrafficRunnerService.Listener {
 
     private View buildTrafficCard() {
         LinearLayout panel = this.vertical();
-        panel.addView(this.buildSpeedHero(), (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(-1, this.dp(160)));
+        panel.addView(this.buildSpeedHero(), (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(-1, this.dp(168)));
         LinearLayout usageRow = new LinearLayout((Context)this);
         usageRow.setOrientation(0);
         usageRow.setGravity(16);
-        LinearLayout.LayoutParams usageParams = new LinearLayout.LayoutParams(-1, this.dp(84));
-        usageParams.topMargin = this.dp(10);
+        LinearLayout.LayoutParams usageParams = new LinearLayout.LayoutParams(-1, this.dp(92));
+        usageParams.topMargin = this.dp(12);
         panel.addView((View)usageRow, (ViewGroup.LayoutParams)usageParams);
         this.trafficTotalText = this.addUsageCard(usageRow, "\u603b\u6d41\u91cf", Formatters.bytes(TrafficPrefs.readTotalBytes((Context)this)), null, null);
         usageRow.addView((View)new Space((Context)this), (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(this.dp(10), 1));
         this.sessionText = this.addUsageCard(usageRow, "\u672c\u6b21\u6d88\u8017", "--", "\u4e0a\u9650", v -> this.showLimitDialog());
-        panel.addView((View)this.label("\u6d41\u91cf\u7ebf\u8def"), (ViewGroup.LayoutParams)this.topMargin(8));
+        panel.addView((View)this.label("\u6d41\u91cf\u7ebf\u8def"), (ViewGroup.LayoutParams)this.topMargin(10));
         this.targetSpinner = new Spinner((Context)this);
         this.targetSpinner.setBackground(this.inputBackground());
-        panel.addView((View)this.targetSpinner, (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(-1, this.dp(44)));
+        panel.addView((View)this.targetSpinner, (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(-1, this.dp(46)));
         this.targetSpinner.setOnTouchListener((v, event) -> {
             if (event.getAction() == 1) {
                 this.showTargetChooser();
@@ -324,10 +324,10 @@ TrafficRunnerService.Listener {
         });
         this.trafficWorkersText = this.buildThreadParam(panel);
         this.startTrafficButton = this.runButton("\u5f00\u59cb");
-        LinearLayout.LayoutParams startParams = new LinearLayout.LayoutParams(-1, this.dp(58));
-        startParams.setMargins(0, this.dp(12), 0, 0);
+        LinearLayout.LayoutParams startParams = new LinearLayout.LayoutParams(-1, this.dp(64));
+        startParams.setMargins(0, this.dp(14), 0, 0);
         panel.addView((View)this.startTrafficButton, (ViewGroup.LayoutParams)startParams);
-        panel.addView(this.buildRegionLatencyPanel(), (ViewGroup.LayoutParams)this.topMargin(12));
+        panel.addView(this.buildRegionLatencyPanel(), (ViewGroup.LayoutParams)this.topMargin(14));
         this.startTrafficButton.setOnClickListener(v -> this.toggleTraffic());
         this.updateMetric(this.trafficTotalText, Formatters.bytes(TrafficPrefs.readTotalBytes((Context)this)));
         this.updateMetric(this.sessionText, "--");
@@ -1850,7 +1850,7 @@ TrafficRunnerService.Listener {
         LinearLayout panel = new LinearLayout((Context)this);
         panel.setOrientation(1);
         panel.setBackground(this.cardBackground());
-        panel.setPadding(this.dp(14), this.dp(10), this.dp(14), this.dp(10));
+        panel.setPadding(this.dp(14), this.dp(11), this.dp(14), this.dp(11));
         panel.setVisibility(8);
         this.regionLatencyPanel = panel;
         TextView title = this.text("\u5730\u533a\u5ef6\u8fdf", 13, this.MUTED, 1);
@@ -2069,7 +2069,7 @@ TrafficRunnerService.Listener {
         Button button = new Button((Context)this);
         button.setText((CharSequence)text);
         button.setAllCaps(false);
-        button.setTextSize(22.0f);
+        button.setTextSize(20.0f);
         button.setTypeface(Typeface.DEFAULT, 1);
         button.setTextColor(this.theme.onPrimary);
         button.setBackground(this.runButtonBackground(false));
