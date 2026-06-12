@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.1 - 2026-06-12
+
+- Align the release tag with the latest README download link.
+- No app feature changes.
+
 ## 1.0.0 - 2026-06-12
 
 - First open-source release.
@@ -9,4 +14,3 @@
 - Route selection and traffic runner controls.
 - Thread count, speed limit, traffic limit, lock-screen running, enhanced concurrency, and notification settings.
 - Multiple visual themes.
-
