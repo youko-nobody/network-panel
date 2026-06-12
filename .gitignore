@@ -2,6 +2,7 @@
 /build/
 /app/build/
 /release/
+/dist/
 /reference_apk/
 /reference_web/
 /recovered_src/

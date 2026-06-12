@@ -1,0 +1,17 @@
+* text=auto
+
+*.bat text eol=crlf
+*.gradle text eol=lf
+*.java text eol=lf
+*.md text eol=lf
+*.properties text eol=lf
+*.xml text eol=lf
+*.yml text eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.apk binary
+*.jks binary
+*.keystore binary

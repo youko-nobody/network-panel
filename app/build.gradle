@@ -1,5 +1,17 @@
 apply plugin: "com.android.application"
 
+def releaseKeystorePropertiesFile = rootProject.file("release/keystore.properties")
+def releaseKeystoreProperties = new Properties()
+def hasReleaseSigning = false
+
+if (releaseKeystorePropertiesFile.exists()) {
+    releaseKeystorePropertiesFile.withInputStream { releaseKeystoreProperties.load(it) }
+    hasReleaseSigning = releaseKeystoreProperties["storeFile"] &&
+            releaseKeystoreProperties["storePassword"] &&
+            releaseKeystoreProperties["keyAlias"] &&
+            releaseKeystoreProperties["keyPassword"]
+}
+
 android {
     namespace "cn.netart.networkpanel"
     compileSdk 36
@@ -12,9 +24,23 @@ android {
         versionName "1.0.0"
     }
 
+    signingConfigs {
+        release {
+            if (hasReleaseSigning) {
+                storeFile rootProject.file("release/${releaseKeystoreProperties["storeFile"]}")
+                storePassword releaseKeystoreProperties["storePassword"]
+                keyAlias releaseKeystoreProperties["keyAlias"]
+                keyPassword releaseKeystoreProperties["keyPassword"]
+            }
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled false
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 
