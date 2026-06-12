@@ -2,29 +2,29 @@
 
 ## 1.0.3 - 2026-06-12
 
-- Refine the home dashboard layout with more balanced module sizing.
-- Keep the existing modules compact instead of stretching them to fill the whole screen.
-- Improve spacing around the speed card, usage cards, start button, and region latency card.
+- 优化首页仪表盘布局，让模块比例更均衡。
+- 保持现有模块紧凑展示，不再强行铺满整个屏幕。
+- 调整实时网速卡片、流量卡片、开始按钮和地区延迟卡片的间距。
 
 ## 1.0.2 - 2026-06-12
 
-- Fix theme switching so all built-in themes can be selected.
-- Improve theme-aware header button contrast.
-- Replace the heavy autumn palette with a lighter autumn theme.
-- Add per-route edit and delete actions in route management.
-- Improve alignment for route name and URL input fields.
+- 修复部分内置主题无法切换的问题。
+- 优化右上角按钮在不同主题下的文字可见性。
+- 将偏重的“秋叶”配色替换为更柔和的“浅秋”主题。
+- 线路管理支持单条线路编辑和删除。
+- 优化线路名称和链接输入框的文字对齐。
 
 ## 1.0.1 - 2026-06-12
 
-- Align the release tag with the latest README download link.
-- No app feature changes.
+- 修正 Release 标签与 README 下载链接的对应关系。
+- 应用功能无变更。
 
 ## 1.0.0 - 2026-06-12
 
-- First open-source release.
-- Native Android implementation.
-- Real-time speed display in `MB/s` and `Mbps`.
-- Total traffic and current session traffic counters.
-- Route selection and traffic runner controls.
-- Thread count, speed limit, traffic limit, lock-screen running, enhanced concurrency, and notification settings.
-- Multiple visual themes.
+- 首个开源版本。
+- 原生 Android 实现。
+- 实时显示 `MB/s` 和 `Mbps`。
+- 支持总流量和本次流量统计。
+- 支持流量线路选择和跑流量控制。
+- 支持线程数、速率上限、流量上限、锁屏运行、增强并发和通知栏设置。
+- 支持多主题切换。
