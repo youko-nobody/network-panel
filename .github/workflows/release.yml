@@ -67,4 +67,25 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: network-panel-${{ github.ref_name }}.apk
+          name: 网络面板 ${{ github.ref_name }}
+          body: |
+            ## 网络面板 ${{ github.ref_name }}
+
+            原生 Android 网络流量面板正式版。
+
+            ### 更新内容
+
+            - 修复部分主题无法切换的问题
+            - 优化右上角按钮在不同主题下的文字可见性
+            - 将“秋叶”主题替换为更柔和的“浅秋”配色
+            - 线路管理支持单条线路编辑和删除
+            - 优化线路名称和链接输入框的文字对齐
+
+            ### 下载
+
+            点击下方 `network-panel-${{ github.ref_name }}.apk` 即可下载 APK。
+
+            ### 安装说明
+
+            Android 可能会提示“未知来源应用”，允许后即可安装。
           generate_release_notes: true
