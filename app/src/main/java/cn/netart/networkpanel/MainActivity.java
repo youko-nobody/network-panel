@@ -5,11 +5,16 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.ColorStateList;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.LinearGradient;
+import android.graphics.Paint;
+import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
+import android.graphics.Shader;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -25,7 +30,6 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.GridLayout;
-import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.ScrollView;
@@ -83,6 +87,7 @@ TrafficRunnerService.Listener {
     private TextView trafficRateMbpsText;
     private TextView rateLimitText;
     private TextView trafficWorkersText;
+    private TextView routeSummaryText;
     private TextView sessionText;
     private View regionLatencyPanel;
     private View domesticLatencyRow;
@@ -257,85 +262,203 @@ TrafficRunnerService.Listener {
         header.setOrientation(0);
         header.setGravity(16);
         header.setClipToPadding(false);
-        header.setPadding(this.dp(16), this.dp(12) + this.statusBarHeight(), this.dp(16), this.dp(8));
+        header.setPadding(this.dp(12), this.dp(10) + this.statusBarHeight(), this.dp(8), this.dp(8));
         header.setBackgroundColor(0);
         LinearLayout brand = new LinearLayout((Context)this);
         brand.setGravity(16);
         header.addView((View)brand, (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(0, -2, 1.0f));
-        LinearLayout iconBox = new LinearLayout((Context)this);
-        iconBox.setGravity(17);
-        ImageView icon = new ImageView((Context)this);
-        icon.setImageResource(R.drawable.app_icon);
-        icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        iconBox.addView((View)icon, (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(this.dp(58), this.dp(58)));
-        brand.addView((View)iconBox, (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(this.dp(64), this.dp(64)));
-        TextView title = this.text(" \u7f51\u7edc\u9762\u677f", 19, this.TEXT, 1);
+        TextView title = this.text("\u7f51\u7edc\u9762\u677f", 18, this.TEXT, 1);
         LinearLayout.LayoutParams titleParams = new LinearLayout.LayoutParams(-2, -2);
-        titleParams.leftMargin = this.dp(4);
+        titleParams.leftMargin = this.dp(2);
         brand.addView((View)title, (ViewGroup.LayoutParams)titleParams);
-        Button themeButton = this.headerButton(this.theme.shortName);
+        Button themeButton = this.headerButton(this.themeChoiceName(this.currentThemeId));
         themeButton.setContentDescription((CharSequence)"\u5207\u6362\u4e3b\u9898");
         themeButton.setOnClickListener(v -> this.cycleTheme());
         themeButton.setOnLongClickListener(v -> {
             this.showThemeChooser();
             return true;
         });
-        LinearLayout.LayoutParams themeParams = new LinearLayout.LayoutParams(this.dp(42), this.dp(42));
-        themeParams.rightMargin = this.dp(8);
+        LinearLayout.LayoutParams themeParams = new LinearLayout.LayoutParams(this.dp(104), this.dp(38));
+        themeParams.rightMargin = this.dp(4);
         header.addView((View)themeButton, (ViewGroup.LayoutParams)themeParams);
         Button app = this.headerButton("\u8bbe\u7f6e");
         app.setOnClickListener(v -> this.showSettingsPage());
-        header.addView((View)app, (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(this.dp(42), this.dp(42)));
+        header.addView((View)app, (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(this.dp(38), this.dp(38)));
         return header;
     }
 
     private View buildTrafficCard() {
         LinearLayout panel = this.vertical();
-        panel.addView(this.buildSpeedHero(), (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(-1, this.dp(168)));
-        LinearLayout usageRow = new LinearLayout((Context)this);
-        usageRow.setOrientation(0);
-        usageRow.setGravity(16);
-        LinearLayout.LayoutParams usageParams = new LinearLayout.LayoutParams(-1, this.dp(92));
-        usageParams.topMargin = this.dp(12);
-        panel.addView((View)usageRow, (ViewGroup.LayoutParams)usageParams);
-        this.trafficTotalText = this.addUsageCard(usageRow, "\u603b\u6d41\u91cf", Formatters.bytes(TrafficPrefs.readTotalBytes((Context)this)), null, null);
-        usageRow.addView((View)new Space((Context)this), (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(this.dp(10), 1));
-        this.sessionText = this.addUsageCard(usageRow, "\u672c\u6b21\u6d88\u8017", "--", "\u4e0a\u9650", v -> this.showLimitDialog());
-        panel.addView((View)this.label("\u6d41\u91cf\u7ebf\u8def"), (ViewGroup.LayoutParams)this.topMargin(10));
-        this.targetSpinner = new Spinner((Context)this);
-        this.targetSpinner.setBackground(this.inputBackground());
-        panel.addView((View)this.targetSpinner, (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(-1, this.dp(46)));
-        this.targetSpinner.setOnTouchListener((v, event) -> {
-            if (event.getAction() == 1) {
-                this.showTargetChooser();
-            }
-            return true;
-        });
-        this.targetSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener(){
-
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                if (!MainActivity.this.restoringTargetSelection && position >= 0 && position < MainActivity.this.targets.size() && position != MainActivity.this.activeTargetIndex) {
-                    MainActivity.this.selectTarget(position);
-                }
-            }
-
-            public void onNothingSelected(AdapterView<?> parent) {
-            }
-        });
-        this.trafficWorkersText = this.buildThreadParam(panel);
-        this.startTrafficButton = this.runButton("\u5f00\u59cb");
-        LinearLayout.LayoutParams startParams = new LinearLayout.LayoutParams(-1, this.dp(64));
-        startParams.setMargins(0, this.dp(14), 0, 0);
-        panel.addView((View)this.startTrafficButton, (ViewGroup.LayoutParams)startParams);
+        panel.addView(this.buildCommandCenter(), (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(-1, this.dp(322)));
+        panel.addView(this.buildControlDeck(), (ViewGroup.LayoutParams)this.topMargin(12));
         panel.addView(this.buildRegionLatencyPanel(), (ViewGroup.LayoutParams)this.topMargin(14));
         this.startTrafficButton.setOnClickListener(v -> this.toggleTraffic());
         this.updateMetric(this.trafficTotalText, Formatters.bytes(TrafficPrefs.readTotalBytes((Context)this)));
         this.updateMetric(this.sessionText, "--");
         this.updateMetric(this.trafficRateMbText, "-- MB/s");
         this.updateMetric(this.trafficRateMbpsText, "-- Mbps");
-        this.updateMetric(this.trafficWorkersText, "--");
+        this.updateMetric(this.trafficWorkersText, this.currentThreads() + " \u7ebf\u7a0b");
+        this.updateMetric(this.routeSummaryText, this.currentRouteName());
         this.updateStartButtonState(false);
         return panel;
+    }
+
+    private View buildCommandCenter() {
+        FrameLayout stage = new FrameLayout((Context)this);
+        stage.setBackground(this.cockpitBackground());
+        stage.setPadding(0, 0, 0, 0);
+        NetworkPulseView pulse = new NetworkPulseView((Context)this);
+        stage.addView((View)pulse, (ViewGroup.LayoutParams)new FrameLayout.LayoutParams(-1, -1));
+        this.lift(stage, 4);
+        LinearLayout center = new LinearLayout((Context)this);
+        center.setOrientation(1);
+        center.setPadding(this.dp(18), this.dp(16), this.dp(18), this.dp(16));
+        stage.addView((View)center, (ViewGroup.LayoutParams)new FrameLayout.LayoutParams(-1, -1));
+        LinearLayout top = new LinearLayout((Context)this);
+        top.setOrientation(0);
+        top.setGravity(16);
+        center.addView((View)top, (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(-1, -2));
+        LinearLayout titles = this.vertical();
+        TextView eyebrow = this.text("\u7ebf\u4e0a\u4f53\u611f", 12, this.theme.onPrimary, 1);
+        eyebrow.setPadding(this.dp(10), this.dp(4), this.dp(10), this.dp(4));
+        eyebrow.setBackground(this.rounded(this.theme.secondary, 999, 0, 0));
+        TextView hint = this.text("\u9891\u6b21\u3001\u5e26\u5bbd\u3001\u8054\u901a\u5ea6", 11, this.theme.muted, 1);
+        LinearLayout.LayoutParams hintParams = new LinearLayout.LayoutParams(-2, -2);
+        hintParams.topMargin = this.dp(8);
+        titles.addView((View)eyebrow, (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(-2, -2));
+        titles.addView((View)hint, (ViewGroup.LayoutParams)hintParams);
+        top.addView((View)titles, (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(0, -2, 1.0f));
+        this.rateLimitText = this.text("", 11, this.theme.onPrimary, 1);
+        this.rateLimitText.setGravity(17);
+        this.rateLimitText.setSingleLine(true);
+        this.rateLimitText.setPadding(this.dp(12), this.dp(6), this.dp(12), this.dp(6));
+        this.rateLimitText.setBackground(this.rounded(this.theme.primary, 999, 0, 0));
+        this.rateLimitText.setOnClickListener(v -> this.showRateLimitDialog());
+        top.addView((View)this.rateLimitText, (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(-2, -2));
+        this.refreshRateLimitLabel();
+        LinearLayout speedRow = new LinearLayout((Context)this);
+        speedRow.setOrientation(0);
+        speedRow.setGravity(16);
+        LinearLayout.LayoutParams speedRowParams = new LinearLayout.LayoutParams(-1, 0, 1.0f);
+        speedRowParams.topMargin = this.dp(8);
+        center.addView((View)speedRow, (ViewGroup.LayoutParams)speedRowParams);
+        this.trafficRateMbText = this.text("--", 42, this.theme.text, 1);
+        this.trafficRateMbText.setGravity(17);
+        this.trafficRateMbText.setSingleLine(true);
+        this.trafficRateMbText.setEllipsize(TextUtils.TruncateAt.END);
+        this.enableAutoSize(this.trafficRateMbText, 22, 42);
+        speedRow.addView((View)this.trafficRateMbText, (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(0, -2, 1.35f));
+        View speedDivider = new View((Context)this);
+        speedDivider.setBackgroundColor(this.theme.divider);
+        LinearLayout.LayoutParams speedDividerParams = new LinearLayout.LayoutParams(this.dp(1), this.dp(34));
+        speedDividerParams.leftMargin = this.dp(10);
+        speedDividerParams.rightMargin = this.dp(10);
+        speedDividerParams.gravity = 16;
+        speedRow.addView(speedDivider, (ViewGroup.LayoutParams)speedDividerParams);
+        this.trafficRateMbpsText = this.text("MB/s", 13, this.theme.muted, 1);
+        this.trafficRateMbpsText.setGravity(17);
+        this.trafficRateMbpsText.setSingleLine(true);
+        this.trafficRateMbpsText.setEllipsize(TextUtils.TruncateAt.END);
+        this.enableAutoSize(this.trafficRateMbpsText, 11, 13);
+        speedRow.addView((View)this.trafficRateMbpsText, (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(0, -2, 0.5f));
+        LinearLayout strip = new LinearLayout((Context)this);
+        strip.setOrientation(0);
+        strip.setGravity(16);
+        strip.setBackground(this.rounded(this.theme.surface, 18, 1, this.theme.line));
+        strip.setPadding(this.dp(12), this.dp(10), this.dp(12), this.dp(10));
+        LinearLayout.LayoutParams stripParams = new LinearLayout.LayoutParams(-1, this.dp(66));
+        stripParams.topMargin = this.dp(10);
+        center.addView((View)strip, (ViewGroup.LayoutParams)stripParams);
+        this.trafficTotalText = this.commandMetric(strip, "\u603b\u6d88\u8017", Formatters.bytes(TrafficPrefs.readTotalBytes((Context)this)), null);
+        View divider = new View((Context)this);
+        divider.setBackgroundColor(this.theme.divider);
+        LinearLayout.LayoutParams dividerParams = new LinearLayout.LayoutParams(this.dp(1), -1);
+        dividerParams.setMargins(this.dp(10), 0, this.dp(10), 0);
+        strip.addView(divider, (ViewGroup.LayoutParams)dividerParams);
+        this.sessionText = this.commandMetric(strip, "\u672c\u6b21", "--", v -> this.showLimitDialog());
+        return stage;
+    }
+
+    private TextView commandMetric(LinearLayout row, String label, String value, View.OnClickListener click) {
+        LinearLayout item = this.vertical();
+        item.setGravity(17);
+        item.setClickable(click != null);
+        item.setPadding(this.dp(2), 0, this.dp(2), 0);
+        if (click != null) {
+            item.setOnClickListener(click);
+        }
+        TextView labelView = this.text(label, 10, this.MUTED, 1);
+        labelView.setGravity(17);
+        item.addView((View)labelView, (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(-1, -2));
+        TextView valueView = this.text(value, 16, this.theme.text, 1);
+        valueView.setGravity(17);
+        valueView.setSingleLine(true);
+        valueView.setEllipsize(TextUtils.TruncateAt.END);
+        this.enableAutoSize(valueView, 12, 16);
+        item.addView((View)valueView, (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(-1, -2));
+        row.addView((View)item, (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(0, -1, 1.0f));
+        return valueView;
+    }
+
+    private View buildControlDeck() {
+        LinearLayout deck = this.vertical();
+        deck.setBackground(this.sectionBackground());
+        deck.setPadding(this.dp(14), this.dp(14), this.dp(14), this.dp(14));
+        LinearLayout head = new LinearLayout((Context)this);
+        head.setOrientation(0);
+        head.setGravity(16);
+        TextView title = this.text("\u63a7\u5236\u53f0", 15, this.theme.text, 1);
+        head.addView((View)title, (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(0, -2, 1.0f));
+        TextView tag = this.text("\u4e00\u952e\u8fd0\u884c", 11, this.theme.onPrimary, 1);
+        tag.setPadding(this.dp(10), this.dp(4), this.dp(10), this.dp(4));
+        tag.setBackground(this.rounded(this.theme.secondary, 999, 0, 0));
+        head.addView((View)tag, (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(-2, -2));
+        deck.addView((View)head, (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(-1, -2));
+        LinearLayout cells = new LinearLayout((Context)this);
+        cells.setOrientation(0);
+        cells.setGravity(16);
+        LinearLayout.LayoutParams cellsParams = new LinearLayout.LayoutParams(-1, this.dp(86));
+        cellsParams.topMargin = this.dp(10);
+        deck.addView((View)cells, (ViewGroup.LayoutParams)cellsParams);
+        this.routeSummaryText = this.controlCell(cells, "\u7ebf\u8def", this.currentRouteName(), "\u9009\u62e9", v -> this.showTargetChooser());
+        cells.addView((View)new Space((Context)this), (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(this.dp(10), 1));
+        this.trafficWorkersText = this.controlCell(cells, "\u7ebf\u7a0b", this.currentThreads() + " \u7ebf\u7a0b", "\u8bbe\u7f6e", v -> this.showThreadDialog());
+        this.startTrafficButton = this.runButton("\u5f00\u59cb");
+        LinearLayout.LayoutParams startParams = new LinearLayout.LayoutParams(-1, this.dp(64));
+        startParams.topMargin = this.dp(14);
+        deck.addView((View)this.startTrafficButton, (ViewGroup.LayoutParams)startParams);
+        return deck;
+    }
+
+    private TextView controlCell(LinearLayout parent, String label, String value, String actionText, View.OnClickListener click) {
+        LinearLayout cell = this.vertical();
+        cell.setGravity(16);
+        cell.setBackground(this.rounded(this.theme.surface, 18, 1, this.theme.line));
+        cell.setPadding(this.dp(14), this.dp(12), this.dp(14), this.dp(12));
+        cell.setClickable(true);
+        cell.setOnClickListener(click);
+        LinearLayout top = new LinearLayout((Context)this);
+        top.setOrientation(0);
+        top.setGravity(16);
+        TextView labelView = this.text(label, 11, this.MUTED, 1);
+        top.addView((View)labelView, (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(0, -2, 1.0f));
+        TextView action = this.text(actionText, 11, this.theme.onPrimary, 1);
+        action.setGravity(17);
+        action.setPadding(this.dp(8), this.dp(2), this.dp(8), this.dp(2));
+        action.setBackground(this.rounded(this.theme.primary, 999, 0, 0));
+        action.setOnClickListener(click);
+        top.addView((View)action);
+        cell.addView((View)top, (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(-1, -2));
+        TextView valueView = this.text(value, 17, this.theme.text, 1);
+        valueView.setGravity(17);
+        valueView.setSingleLine(true);
+        valueView.setEllipsize(TextUtils.TruncateAt.END);
+        this.enableAutoSize(valueView, 12, 17);
+        LinearLayout.LayoutParams valueParams = new LinearLayout.LayoutParams(-1, 0, 1.0f);
+        valueParams.topMargin = this.dp(4);
+        cell.addView((View)valueView, (ViewGroup.LayoutParams)valueParams);
+        parent.addView((View)cell, (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(0, -1, 1.0f));
+        return valueView;
     }
 
     private View buildSettingsPanel() {
@@ -420,11 +543,113 @@ TrafficRunnerService.Listener {
         return screen;
     }
 
+    private Drawable cockpitBackground() {
+        return this.gradient(GradientDrawable.Orientation.TL_BR, this.theme.heroStart, this.theme.heroEnd, 26, this.theme.line);
+    }
+
+    private final class NetworkPulseView extends View {
+        private final Paint gridPaint = new Paint(1);
+        private final Paint ringPaint = new Paint(1);
+        private final Paint wavePaint = new Paint(1);
+        private final Paint pulsePaint = new Paint(1);
+        private final Paint barPaint = new Paint(1);
+        private final RectF ringRect = new RectF();
+
+        NetworkPulseView(Context context) {
+            super(context);
+            this.gridPaint.setStyle(Paint.Style.STROKE);
+            this.ringPaint.setStyle(Paint.Style.STROKE);
+            this.wavePaint.setStyle(Paint.Style.STROKE);
+            this.wavePaint.setStrokeCap(Paint.Cap.ROUND);
+            this.pulsePaint.setStyle(Paint.Style.FILL);
+            this.barPaint.setStyle(Paint.Style.FILL);
+        }
+
+        protected void onDraw(Canvas canvas) {
+            int width = this.getWidth();
+            int height = this.getHeight();
+            if (width <= 0 || height <= 0) {
+                return;
+            }
+            float phase = (float)(SystemClock.uptimeMillis() % 2600L) / 2600.0f;
+            float density = MainActivity.this.getResources().getDisplayMetrics().density;
+            canvas.drawColor(Color.TRANSPARENT);
+            this.gridPaint.setStrokeWidth(density);
+            this.gridPaint.setColor(Color.argb(18, Color.red(MainActivity.this.theme.secondary), Color.green(MainActivity.this.theme.secondary), Color.blue(MainActivity.this.theme.secondary)));
+            int stepX = MainActivity.this.dp(28);
+            int stepY = MainActivity.this.dp(24);
+            for (int x = 0; x <= width + stepX; x += stepX) {
+                canvas.drawLine((float)x, 0.0f, (float)x, (float)height, this.gridPaint);
+            }
+            for (int y = 0; y <= height + stepY; y += stepY) {
+                canvas.drawLine(0.0f, (float)y, (float)width, (float)y, this.gridPaint);
+            }
+            this.ringPaint.setStrokeWidth(MainActivity.this.dp(2.5f));
+            this.ringPaint.setColor(Color.argb(42, Color.red(MainActivity.this.theme.primary), Color.green(MainActivity.this.theme.primary), Color.blue(MainActivity.this.theme.primary)));
+            float ring = Math.min(width, height) * 0.72f;
+            this.ringRect.set(width - ring * 0.94f, -ring * 0.16f, width + ring * 0.18f, ring * 0.95f);
+            canvas.drawArc(this.ringRect, 192.0f, 116.0f, false, this.ringPaint);
+            this.ringPaint.setColor(Color.argb(28, Color.red(MainActivity.this.theme.secondary), Color.green(MainActivity.this.theme.secondary), Color.blue(MainActivity.this.theme.secondary)));
+            this.ringRect.set(-ring * 0.34f, height - ring * 0.62f, ring * 0.52f, height + ring * 0.15f);
+            canvas.drawArc(this.ringRect, 18.0f, 146.0f, false, this.ringPaint);
+            this.wavePaint.setStrokeWidth(MainActivity.this.dp(3.2f));
+            this.wavePaint.setColor(Color.argb(92, Color.red(MainActivity.this.theme.activeEnd), Color.green(MainActivity.this.theme.activeEnd), Color.blue(MainActivity.this.theme.activeEnd)));
+            float baseY = height * 0.78f;
+            float amp = MainActivity.this.dp(14);
+            float startX = MainActivity.this.dp(18);
+            float usable = width - MainActivity.this.dp(36);
+            float x1 = startX;
+            float x2 = startX + usable * 0.18f;
+            float x3 = startX + usable * 0.36f;
+            float x4 = startX + usable * 0.55f;
+            float x5 = startX + usable * 0.73f;
+            float x6 = startX + usable * 0.92f;
+            float y1 = baseY + (float)Math.sin((phase + 0.0f) * 6.2831855f) * amp * 0.2f;
+            float y2 = baseY - amp * 0.85f + (float)Math.sin((phase + 0.12f) * 6.2831855f) * amp * 0.55f;
+            float y3 = baseY + amp * 0.3f + (float)Math.sin((phase + 0.26f) * 6.2831855f) * amp * 0.65f;
+            float y4 = baseY - amp * 1.05f + (float)Math.sin((phase + 0.42f) * 6.2831855f) * amp * 0.55f;
+            float y5 = baseY + amp * 0.08f + (float)Math.sin((phase + 0.64f) * 6.2831855f) * amp * 0.6f;
+            float y6 = baseY - amp * 0.4f + (float)Math.sin((phase + 0.82f) * 6.2831855f) * amp * 0.38f;
+            canvas.drawLine(x1, y1, x2, y2, this.wavePaint);
+            canvas.drawLine(x2, y2, x3, y3, this.wavePaint);
+            canvas.drawLine(x3, y3, x4, y4, this.wavePaint);
+            canvas.drawLine(x4, y4, x5, y5, this.wavePaint);
+            canvas.drawLine(x5, y5, x6, y6, this.wavePaint);
+            this.barPaint.setColor(Color.argb(34, Color.red(MainActivity.this.theme.primary), Color.green(MainActivity.this.theme.primary), Color.blue(MainActivity.this.theme.primary)));
+            int bars = 5;
+            float barW = MainActivity.this.dp(10);
+            float gap = MainActivity.this.dp(8);
+            float totalBars = bars * barW + (bars - 1) * gap;
+            float left = (width - totalBars) * 0.5f;
+            float bottom = height * 0.58f;
+            for (int i = 0; i < bars; ++i) {
+                float factor = 0.35f + 0.65f * (float)Math.sin((phase + (float)i * 0.13f) * 6.2831855f);
+                float barH = MainActivity.this.dp(18) + factor * MainActivity.this.dp(34);
+                float x = left + (barW + gap) * (float)i;
+                canvas.drawRoundRect(new RectF(x, bottom - barH, x + barW, bottom), MainActivity.this.dp(10), MainActivity.this.dp(10), this.barPaint);
+            }
+            this.pulsePaint.setColor(Color.argb(72, Color.red(MainActivity.this.theme.success), Color.green(MainActivity.this.theme.success), Color.blue(MainActivity.this.theme.success)));
+            float px = width * (0.12f + 0.78f * phase);
+            float py = height * 0.2f + (float)Math.sin((phase + 0.35f) * 6.2831855f) * MainActivity.this.dp(18);
+            canvas.drawCircle(px, py, MainActivity.this.dp(3.4f), this.pulsePaint);
+            canvas.drawCircle(width - px * 0.38f, height * 0.18f, MainActivity.this.dp(2.4f), this.pulsePaint);
+            if (Build.VERSION.SDK_INT >= 16) {
+                this.postInvalidateOnAnimation();
+            } else {
+                this.postInvalidateDelayed(16L);
+            }
+        }
+    }
+
     private void showThemeChooser() {
         AlertDialog dialog;
+        ScrollView scroll = new ScrollView((Context)this);
+        scroll.setFillViewport(false);
+        scroll.setBackground(this.panelBackground());
         LinearLayout panel = this.vertical();
         panel.setPadding(this.dp(16), this.dp(10), this.dp(16), this.dp(16));
         panel.setBackground(this.panelBackground());
+        scroll.addView((View)panel, (ViewGroup.LayoutParams)new FrameLayout.LayoutParams(-1, -2));
         AlertDialog[] dialogRef = new AlertDialog[1];
         for (int i = 0; i < AppPrefs.THEME_COUNT; ++i) {
             int themeId = i;
@@ -438,9 +663,7 @@ TrafficRunnerService.Listener {
                 }
             }), (ViewGroup.LayoutParams)this.topMargin(i == 0 ? 0 : 8));
         }
-        TextView title = this.text("\u9009\u62e9\u4e3b\u9898", 20, this.TEXT, 1);
-        title.setPadding(this.dp(0), this.dp(0), this.dp(0), this.dp(6));
-        dialogRef[0] = dialog = new AlertDialog.Builder((Context)this).setCustomTitle((View)title).setView((View)panel).show();
+        dialogRef[0] = dialog = new AlertDialog.Builder((Context)this).setView((View)scroll).show();
         Window window = dialog.getWindow();
         if (window != null) {
             window.setBackgroundDrawable((Drawable)new ColorDrawable(0));
@@ -479,9 +702,7 @@ TrafficRunnerService.Listener {
                 }
             }), (ViewGroup.LayoutParams)this.topMargin(i == 0 ? 0 : 8));
         }
-        TextView title = this.text("\u9009\u62e9\u6d41\u91cf\u7ebf\u8def", 20, this.TEXT, 1);
-        title.setPadding(this.dp(0), this.dp(0), this.dp(0), this.dp(6));
-        dialogRef[0] = dialog = new AlertDialog.Builder((Context)this).setCustomTitle((View)title).setView((View)scroll).show();
+        dialogRef[0] = dialog = new AlertDialog.Builder((Context)this).setView((View)scroll).show();
         Window window = dialog.getWindow();
         if (window != null) {
             window.setBackgroundDrawable((Drawable)new ColorDrawable(0));
@@ -567,23 +788,12 @@ TrafficRunnerService.Listener {
         buttons.addView((View)new Space((Context)this), (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(this.dp(10), 1));
         Button clear = this.actionButton("\u6e05\u7a7a\u94fe\u63a5", false);
         buttons.addView((View)clear, (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(0, this.dp(44), 1.0f));
-        Button defaults = this.actionButton("\u9ed8\u8ba4\u94fe\u63a5", true);
-        panel.addView((View)defaults, (ViewGroup.LayoutParams)this.topMargin(10));
         add.setOnClickListener(v -> this.addTarget());
         clear.setOnClickListener(v -> {
             this.targets.clear();
             TrafficPrefs.writeTargets((Context)this, this.targets);
             this.refreshTargetList();
             this.appendLog("\u94fe\u63a5\u5217\u8868\u5df2\u6e05\u7a7a");
-        });
-        defaults.setOnClickListener(v -> {
-            this.targets.clear();
-            this.targets.addAll(TrafficPrefs.defaultTargets());
-            this.activeTargetIndex = 0;
-            TrafficPrefs.writeTargets((Context)this, this.targets);
-            TrafficPrefs.writeActiveIndex((Context)this, this.activeTargetIndex);
-            this.refreshTargetList();
-            this.appendLog("\u5df2\u6062\u590d\u9ed8\u8ba4\u6d41\u91cf\u94fe\u63a5");
         });
         return panel;
     }
@@ -959,6 +1169,9 @@ TrafficRunnerService.Listener {
         }
         if (this.trafficWorkersText != null) {
             this.updateMetric(this.trafficWorkersText, this.targets.isEmpty() ? "--" : this.currentThreadValue + " \u7ebf\u7a0b");
+        }
+        if (this.routeSummaryText != null) {
+            this.updateMetric(this.routeSummaryText, this.currentRouteName());
         }
     }
 
@@ -1480,6 +1693,9 @@ TrafficRunnerService.Listener {
 
     private ThemePalette themeFor(int id) {
         switch (id) {
+            case 0: {
+                return new ThemePalette("\u51b0\u5ddd\u84dd", false, this.rgb("#F3FAFF"), this.rgb("#E6F0FF"), this.rgb("#FFFFFF"), this.rgb("#F7FBFF"), this.rgb("#102A43"), this.rgb("#627D98"), this.rgb("#91A9C2"), this.rgb("#2563EB"), this.rgb("#0891B2"), this.rgb("#059669"), this.rgb("#DC2626"), this.rgb("#D8E7F8"), this.rgb("#DCEBFA"), this.rgb("#7289A3"), this.rgb("#EEF7FF"), this.rgb("#F0FDF4"), this.rgb("#BBF7D0"), this.rgb("#DBEAFE"), this.rgb("#E0F2FE"), this.rgb("#3B82F6"), this.rgb("#06B6D4"), this.rgb("#0F766E"), this.rgb("#2563EB"), this.rgb("#FFFFFF"));
+            }
             case 1: {
                 return new ThemePalette("\u591c", true, this.rgb("#0B1220"), this.rgb("#111827"), this.rgb("#111827"), this.rgb("#172033"), this.rgb("#E8EEF7"), this.rgb("#A7B4C7"), this.rgb("#8392A8"), this.rgb("#60A5FA"), this.rgb("#22D3EE"), this.rgb("#4ADE80"), this.rgb("#F87171"), this.rgb("#27344A"), this.rgb("#314157"), this.rgb("#B6C0CF"), this.rgb("#172033"), this.rgb("#14261E"), this.rgb("#245B3C"), this.rgb("#172033"), this.rgb("#101A2C"), this.rgb("#4F46E5"), this.rgb("#38BDF8"), this.rgb("#14B8A6"), this.rgb("#2563EB"), this.rgb("#F8FAFC"));
             }
@@ -1496,19 +1712,37 @@ TrafficRunnerService.Listener {
                 return new ThemePalette("\u6d77", false, this.rgb("#EAFBFF"), this.rgb("#DFF7EF"), this.rgb("#FFFFFF"), this.rgb("#F2FCFA"), this.rgb("#123038"), this.rgb("#5C7880"), this.rgb("#8AA4AA"), this.rgb("#0E7490"), this.rgb("#0D9488"), this.rgb("#16A34A"), this.rgb("#E11D48"), this.rgb("#CBEAF0"), this.rgb("#D6EEF2"), this.rgb("#6E8A92"), this.rgb("#E8F9F7"), this.rgb("#ECFDF5"), this.rgb("#A7F3D0"), this.rgb("#CCFBF1"), this.rgb("#BAE6FD"), this.rgb("#06B6D4"), this.rgb("#14B8A6"), this.rgb("#0EA5E9"), this.rgb("#10B981"), this.rgb("#FFFFFF"));
             }
             case 6: {
-                return new ThemePalette("\u51b0", false, this.rgb("#F3FAFF"), this.rgb("#E6F0FF"), this.rgb("#FFFFFF"), this.rgb("#F7FBFF"), this.rgb("#102A43"), this.rgb("#627D98"), this.rgb("#91A9C2"), this.rgb("#2563EB"), this.rgb("#0891B2"), this.rgb("#059669"), this.rgb("#DC2626"), this.rgb("#D8E7F8"), this.rgb("#DCEBFA"), this.rgb("#7289A3"), this.rgb("#EEF7FF"), this.rgb("#F0FDF4"), this.rgb("#BBF7D0"), this.rgb("#DBEAFE"), this.rgb("#E0F2FE"), this.rgb("#3B82F6"), this.rgb("#06B6D4"), this.rgb("#0F766E"), this.rgb("#2563EB"), this.rgb("#FFFFFF"));
-            }
-            case 7: {
                 return new ThemePalette("\u6f6e", true, this.rgb("#061A24"), this.rgb("#082F3A"), this.rgb("#0B2430"), this.rgb("#103342"), this.rgb("#E6FFFB"), this.rgb("#95C9D4"), this.rgb("#6DA8B7"), this.rgb("#22D3EE"), this.rgb("#2DD4BF"), this.rgb("#34D399"), this.rgb("#FB7185"), this.rgb("#1B5160"), this.rgb("#256575"), this.rgb("#8BB7C0"), this.rgb("#113944"), this.rgb("#0D3B31"), this.rgb("#1F7A65"), this.rgb("#0E7490"), this.rgb("#0F766E"), this.rgb("#06B6D4"), this.rgb("#2DD4BF"), this.rgb("#2563EB"), this.rgb("#06B6D4"), this.rgb("#ECFEFF"));
             }
-            case 8: {
+            case 7: {
                 return new ThemePalette("\u6781", true, this.rgb("#07111F"), this.rgb("#0E1B2A"), this.rgb("#0F2233"), this.rgb("#162C3E"), this.rgb("#EAF6FF"), this.rgb("#A9C2D8"), this.rgb("#7896AE"), this.rgb("#7DD3FC"), this.rgb("#A7F3D0"), this.rgb("#4ADE80"), this.rgb("#FDA4AF"), this.rgb("#27445B"), this.rgb("#31516A"), this.rgb("#92AFC4"), this.rgb("#172F43"), this.rgb("#123C35"), this.rgb("#2A6F61"), this.rgb("#164E63"), this.rgb("#1D4ED8"), this.rgb("#0EA5E9"), this.rgb("#22D3EE"), this.rgb("#14B8A6"), this.rgb("#3B82F6"), this.rgb("#F8FAFC"));
             }
-            case 9: {
+            case 8: {
                 return new ThemePalette("\u66dc", true, this.rgb("#1C2024"), this.rgb("#262D32"), this.rgb("#242A2E"), this.rgb("#2E363C"), this.rgb("#F9FAFC"), this.rgb("#C6D2D8"), this.rgb("#8DA7B4"), this.rgb("#8DA7B4"), this.rgb("#9BD8BE"), this.rgb("#76D7A5"), this.rgb("#FF8A8A"), this.rgb("#3B4044"), this.rgb("#465057"), this.rgb("#A9B7BE"), this.rgb("#313A40"), this.rgb("#203B33"), this.rgb("#4E9279"), this.rgb("#2F3B42"), this.rgb("#7190A1"), this.rgb("#8DA7B4"), this.rgb("#9BD8BE"), this.rgb("#6ED4A6"), this.rgb("#5AA3BE"), this.rgb("#101418"));
             }
+            case 9: {
+                return new ThemePalette("\u78b3", true, this.rgb("#0B0F14"), this.rgb("#11161D"), this.rgb("#151C22"), this.rgb("#1A2128"), this.rgb("#E8F0F4"), this.rgb("#9BA8B2"), this.rgb("#73828C"), this.rgb("#2ED7B2"), this.rgb("#92B8AD"), this.rgb("#43C9A0"), this.rgb("#DA6A73"), this.rgb("#29343C"), this.rgb("#34404A"), this.rgb("#AEBBC2"), this.rgb("#1A232A"), this.rgb("#173229"), this.rgb("#224A3E"), this.rgb("#172028"), this.rgb("#0F141A"), this.rgb("#2ED7B2"), this.rgb("#59E0C4"), this.rgb("#39C49A"), this.rgb("#45D8B8"), this.rgb("#F4FAFC"));
+            }
+            case 10: {
+                return new ThemePalette("\u94f6", true, this.rgb("#090D12"), this.rgb("#11161D"), this.rgb("#151A21"), this.rgb("#1A2028"), this.rgb("#E7EDF4"), this.rgb("#A0ACB8"), this.rgb("#7F8C98"), this.rgb("#6EA8FF"), this.rgb("#A7BACF"), this.rgb("#7DB0FF"), this.rgb("#E2E8F0"), this.rgb("#2A3540"), this.rgb("#343F4A"), this.rgb("#B1BDCA"), this.rgb("#1B2129"), this.rgb("#12212D"), this.rgb("#203142"), this.rgb("#182029"), this.rgb("#10161D"), this.rgb("#6EA8FF"), this.rgb("#84B6FF"), this.rgb("#6DD6C0"), this.rgb("#4A89E8"), this.rgb("#F5F8FC"));
+            }
+            case 11: {
+                return new ThemePalette("\u7d2b", true, this.rgb("#0A0712"), this.rgb("#120D1C"), this.rgb("#171321"), this.rgb("#1D182A"), this.rgb("#EFEAFB"), this.rgb("#B2A9C6"), this.rgb("#8F84A5"), this.rgb("#8B7CFF"), this.rgb("#6E8DFF"), this.rgb("#C47CFF"), this.rgb("#F27A92"), this.rgb("#2B243E"), this.rgb("#382D52"), this.rgb("#BEB2DA"), this.rgb("#1E192E"), this.rgb("#17152B"), this.rgb("#2A3D6A"), this.rgb("#1D1830"), this.rgb("#11101A"), this.rgb("#9A8CFF"), this.rgb("#7A7CFF"), this.rgb("#5B63FF"), this.rgb("#8B7CFF"), this.rgb("#F7F3FF"));
+            }
+            case 12: {
+                return new ThemePalette("\u91d1", true, this.rgb("#0D0B09"), this.rgb("#15110E"), this.rgb("#1A1712"), this.rgb("#201B16"), this.rgb("#F5E7C9"), this.rgb("#BFA98A"), this.rgb("#9A8667"), this.rgb("#E0A84A"), this.rgb("#C8A15A"), this.rgb("#DCA24B"), this.rgb("#E58E7A"), this.rgb("#33281E"), this.rgb("#423528"), this.rgb("#C9B68C"), this.rgb("#211B14"), this.rgb("#322010"), this.rgb("#5C4520"), this.rgb("#2A231A"), this.rgb("#15110C"), this.rgb("#E0A84A"), this.rgb("#D9B15A"), this.rgb("#E0A84A"), this.rgb("#C7882A"), this.rgb("#FFF5DD"));
+            }
+            case 13: {
+                return new ThemePalette("\u8584", true, this.rgb("#09110F"), this.rgb("#101916"), this.rgb("#121B18"), this.rgb("#17211D"), this.rgb("#E5FBF5"), this.rgb("#A3CDBF"), this.rgb("#7BA996"), this.rgb("#63E6C7"), this.rgb("#86DCC8"), this.rgb("#4CBD9E"), this.rgb("#DF6B7A"), this.rgb("#23312D"), this.rgb("#2D3C38"), this.rgb("#A7CFC3"), this.rgb("#17231F"), this.rgb("#13322A"), this.rgb("#244C42"), this.rgb("#17241F"), this.rgb("#0F1613"), this.rgb("#63E6C7"), this.rgb("#7EEAD1"), this.rgb("#58D0B1"), this.rgb("#49E0C0"), this.rgb("#F3FFFB"));
+            }
+            case 14: {
+                return new ThemePalette("\u96fe", true, this.rgb("#0C1117"), this.rgb("#111720"), this.rgb("#151B22"), this.rgb("#1A212A"), this.rgb("#EAF0F6"), this.rgb("#A9B9C7"), this.rgb("#8496A6"), this.rgb("#8DB8D8"), this.rgb("#9DB3CA"), this.rgb("#4BB7A7"), this.rgb("#DC6B77"), this.rgb("#27323E"), this.rgb("#33404C"), this.rgb("#B2C0CC"), this.rgb("#17202A"), this.rgb("#123129"), this.rgb("#20483F"), this.rgb("#18212B"), this.rgb("#10161C"), this.rgb("#8DB8D8"), this.rgb("#A5C9E6"), this.rgb("#57C7B0"), this.rgb("#86C2E2"), this.rgb("#F5FAFE"));
+            }
+            case 15: {
+                return new ThemePalette("\u7ea2", true, this.rgb("#10090B"), this.rgb("#161013"), this.rgb("#1A1214"), this.rgb("#20171A"), this.rgb("#F3E7EA"), this.rgb("#B79BA5"), this.rgb("#8F7A84"), this.rgb("#D46B7A"), this.rgb("#A58AA0"), this.rgb("#C96C7E"), this.rgb("#E58C8C"), this.rgb("#2F2328"), this.rgb("#3D2E34"), this.rgb("#BDA8AF"), this.rgb("#22181D"), this.rgb("#2B1820"), this.rgb("#4A2530"), this.rgb("#27171B"), this.rgb("#140E11"), this.rgb("#D46B7A"), this.rgb("#C05F6C"), this.rgb("#D46B7A"), this.rgb("#A64D5D"), this.rgb("#FAF0F2"));
+            }
         }
-        return new ThemePalette("\u6d45", false, this.rgb("#F4F7FB"), this.rgb("#EAF1F8"), this.rgb("#FFFFFF"), this.rgb("#F8FBFF"), this.rgb("#0F172A"), this.rgb("#64748B"), this.rgb("#94A3B8"), this.rgb("#2563EB"), this.rgb("#0891B2"), this.rgb("#16A34A"), this.rgb("#E11D48"), this.rgb("#DCE5F0"), this.rgb("#DCE5F0"), this.rgb("#666A70"), this.rgb("#FFFFFF"), this.rgb("#F0FDF4"), this.rgb("#BBF7D0"), this.rgb("#FFFFFF"), this.rgb("#F8FBFF"), this.rgb("#6576FF"), this.rgb("#41B7F2"), this.rgb("#2563EB"), this.rgb("#16A34A"), this.rgb("#FFFFFF"));
+        return this.themeFor(0);
     }
 
     private Drawable screenBackground() {
@@ -1556,7 +1790,10 @@ TrafficRunnerService.Listener {
     }
 
     private Drawable runButtonBackground(boolean running) {
-        return this.gradient(GradientDrawable.Orientation.LEFT_RIGHT, running ? this.theme.activeStart : this.theme.primaryStart, running ? this.theme.activeEnd : this.theme.primaryEnd, 16, 0);
+        if (running) {
+            return this.gradient(GradientDrawable.Orientation.LEFT_RIGHT, this.rgb("#FF3D5A"), this.rgb("#FFB14A"), 20, this.rgb("#FFEA9E"));
+        }
+        return this.gradient(GradientDrawable.Orientation.LEFT_RIGHT, this.theme.primaryStart, this.theme.primaryEnd, 16, 0);
     }
 
     private Drawable rounded(int fill, int radiusDp, int strokeDp, int strokeColor) {
@@ -1584,6 +1821,9 @@ TrafficRunnerService.Listener {
 
     private String themeChoiceName(int id) {
         switch (id) {
+            case 0: {
+                return "\u51b0\u5ddd\u84dd";
+            }
             case 1: {
                 return "\u6697\u591c";
             }
@@ -1600,23 +1840,44 @@ TrafficRunnerService.Listener {
                 return "\u6d77\u76d0\u8584\u8377";
             }
             case 6: {
-                return "\u51b0\u5ddd\u84dd";
-            }
-            case 7: {
                 return "\u6df1\u6d77\u6f6e\u6c50";
             }
-            case 8: {
+            case 7: {
                 return "\u6781\u591c\u51b7\u5149";
             }
-            case 9: {
+            case 8: {
                 return "\u66dc\u77f3\u84dd\u7eff";
             }
+            case 9: {
+                return "\u78b3\u7070\u9752\u7eff";
+            }
+            case 10: {
+                return "\u77f3\u58a8\u84dd\u94f6";
+            }
+            case 11: {
+                return "\u6697\u7d2b\u7535\u5149";
+            }
+            case 12: {
+                return "\u7425\u73c0\u9ed1\u91d1";
+            }
+            case 13: {
+                return "\u8584\u8377\u9ed1";
+            }
+            case 14: {
+                return "\u96fe\u84dd\u7070";
+            }
+            case 15: {
+                return "\u9152\u7ea2\u9ed1";
+            }
         }
-        return "\u6d45\u8272";
+        return "\u51b0\u5ddd\u84dd";
     }
 
     private String themeChoiceDesc(int id) {
         switch (id) {
+            case 0: {
+                return "\u9ed8\u8ba4\u51b0\u84dd\u4e3b\u9898\uff0c\u6e05\u723d\u901a\u900f";
+            }
             case 1: {
                 return "\u6df1\u8272\u4f4e\u4eae\u5ea6\uff0c\u9002\u5408\u591c\u95f4\u957f\u65f6\u95f4\u8fd0\u884c";
             }
@@ -1630,22 +1891,40 @@ TrafficRunnerService.Listener {
                 return "\u6de1\u674f\u9ec4\u3001\u9ea6\u7a57\u91d1\u548c\u67d4\u548c\u67ab\u6a59";
             }
             case 5: {
-                return "\u6d45\u8272\u6e05\u51c9\uff0c\u6d77\u76d0\u767d\u3001\u8584\u8377\u7eff\u548c\u6d45\u6c34\u84dd";
+                return "\u6d77\u76d0\u767d\u3001\u8584\u8377\u7eff\u548c\u6d45\u6c34\u84dd";
             }
             case 6: {
-                return "\u51b0\u84dd\u6d45\u8272\uff0c\u51b7\u767d\u5e95\u548c\u901a\u900f\u84dd\u8272\u6309\u94ae";
+                return "\u4f4e\u4eae\u5ea6\u9752\u84dd\u4e0e\u7eff\u677e\u77f3\u9ad8\u5149";
             }
             case 7: {
-                return "\u6df1\u6d77\u6697\u8272\uff0c\u4f4e\u4eae\u5ea6\u9752\u84dd\u4e0e\u7eff\u677e\u77f3\u9ad8\u5149";
+                return "\u51b7\u84dd\u80cc\u666f\u548c\u51b0\u5149\u5f3a\u8c03\u8272";
             }
             case 8: {
-                return "\u6781\u591c\u6df1\u8272\uff0c\u51b7\u84dd\u80cc\u666f\u548c\u51b0\u5149\u5f3a\u8c03\u8272";
-            }
-            case 9: {
                 return "\u6df1\u7070\u3001\u84dd\u7070\u548c\u9752\u7eff\u8272";
             }
+            case 9: {
+                return "\u78b3\u7070\u5e95\u4e0e\u4f4e\u9971\u548c\u9752\u7eff\u8272";
+            }
+            case 10: {
+                return "\u77f3\u58a8\u9ed1\u4e0e\u51b7\u84dd\u94f6\uff0c\u9ad8\u7ea7\u7406\u6027";
+            }
+            case 11: {
+                return "\u514b\u5236\u7d2b\u84dd\u9ad8\u5149\uff0c\u79d1\u6280\u611f\u66f4\u5f3a";
+            }
+            case 12: {
+                return "\u70ad\u9ed1\u4e0e\u7425\u73c0\u91d1\uff0c\u7a33\u91cd\u6709\u54c1\u724c\u611f";
+            }
+            case 13: {
+                return "\u9ed1\u8272\u5e95\u914d\u6e05\u723d\u8584\u8377\u7eff";
+            }
+            case 14: {
+                return "\u96fe\u84dd\u7070\u7cfb\u7edf\u98ce\uff0c\u5b89\u9759\u5e72\u51c0";
+            }
+            case 15: {
+                return "\u4f4e\u9971\u548c\u9152\u7ea2\u5f3a\u8c03\uff0c\u6210\u719f\u514b\u5236";
+            }
         }
-        return "\u9ed8\u8ba4\u7f51\u7edc\u5de5\u5177\u6d45\u8272\u98ce\u683c";
+        return "\u9ed8\u8ba4\u51b0\u5ddd\u84dd\u4e3b\u9898";
     }
 
     private String phaseName(SpeedTestEngine.TestPhase phase) {
@@ -1747,7 +2026,7 @@ TrafficRunnerService.Listener {
         hero.setOrientation(1);
         hero.setGravity(16);
         hero.setBackground(this.heroBackground());
-        hero.setPadding(this.dp(18), this.dp(14), this.dp(18), this.dp(14));
+        hero.setPadding(this.dp(16), this.dp(12), this.dp(16), this.dp(12));
         LinearLayout top = new LinearLayout((Context)this);
         top.setOrientation(0);
         top.setGravity(16);
@@ -1770,17 +2049,17 @@ TrafficRunnerService.Listener {
         this.trafficRateMbText.setEllipsize(TextUtils.TruncateAt.END);
         this.enableAutoSize(this.trafficRateMbText, 24, 38);
         LinearLayout.LayoutParams mbParams = new LinearLayout.LayoutParams(-1, 0, 1.0f);
-        mbParams.topMargin = this.dp(6);
+        mbParams.topMargin = this.dp(4);
         hero.addView((View)this.trafficRateMbText, (ViewGroup.LayoutParams)mbParams);
         LinearLayout bottom = new LinearLayout((Context)this);
         bottom.setOrientation(0);
         bottom.setGravity(16);
         hero.addView((View)bottom, (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(-1, -2));
-        this.trafficRateMbpsText = this.text("-- Mbps", 17, this.MUTED, 1);
+        this.trafficRateMbpsText = this.text("-- Mbps", 15, this.MUTED, 1);
         this.trafficRateMbpsText.setGravity(17);
         this.trafficRateMbpsText.setSingleLine(true);
         this.trafficRateMbpsText.setEllipsize(TextUtils.TruncateAt.END);
-        this.enableAutoSize(this.trafficRateMbpsText, 13, 17);
+        this.enableAutoSize(this.trafficRateMbpsText, 12, 15);
         bottom.addView((View)this.trafficRateMbpsText, (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(0, -2, 1.0f));
         return hero;
     }
@@ -1871,6 +2150,17 @@ TrafficRunnerService.Listener {
         return panel;
     }
 
+    private String currentRouteName() {
+        if (this.targets.isEmpty()) {
+            return "\u6682\u65e0\u7ebf\u8def";
+        }
+        int index = TrafficPrefs.readActiveIndex((Context)this, this.targets.size());
+        if (index < 0 || index >= this.targets.size()) {
+            index = 0;
+        }
+        return this.targets.get(index).displayName();
+    }
+
     private LatencyRow latencyRow(LinearLayout parent) {
         LinearLayout row = new LinearLayout((Context)this);
         row.setOrientation(0);
@@ -1905,11 +2195,11 @@ TrafficRunnerService.Listener {
         box.setBackground(this.showItemBackground());
         box.setClipToPadding(false);
         box.setClipChildren(false);
-        box.setPadding(this.dp(22), this.dp(13), this.dp(22), this.dp(14));
+        box.setPadding(this.dp(16), this.dp(12), this.dp(16), this.dp(12));
         LinearLayout top = new LinearLayout((Context)this);
         top.setOrientation(0);
         top.setGravity(16);
-        TextView labelView = this.text(label, 15, this.TEXT, 1);
+        TextView labelView = this.text(label, 13, this.MUTED, 1);
         top.addView((View)labelView, (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(0, -2, 1.0f));
         if (actionText != null && action != null) {
             TextView actionView = this.text(actionText, 12, this.CYAN, 1);
@@ -1919,24 +2209,24 @@ TrafficRunnerService.Listener {
             actionView.setOnClickListener(action);
             top.addView((View)actionView);
         } else if (mark != null) {
-            TextView markView = this.text(mark, 15, main ? this.CYAN : this.MARK_MUTED, 1);
+            TextView markView = this.text(mark, 13, main ? this.CYAN : this.MARK_MUTED, 1);
             markView.setGravity(5);
             top.addView((View)markView);
         }
         box.addView((View)top, (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(-1, -2));
-        TextView valueView = this.text(value, main ? 29 : 28, this.TEXT, 1);
+        TextView valueView = this.text(value, main ? 26 : 23, this.TEXT, 1);
         valueView.setGravity(17);
         valueView.setSingleLine(true);
         valueView.setEllipsize(TextUtils.TruncateAt.END);
         valueView.setSelected(true);
         valueView.setHorizontallyScrolling(false);
-        this.enableAutoSize(valueView, main ? 20 : 18, main ? 29 : 28);
+        this.enableAutoSize(valueView, main ? 18 : 15, main ? 26 : 23);
         LinearLayout.LayoutParams valueParams = new LinearLayout.LayoutParams(-1, 0, 1.0f);
         valueParams.topMargin = this.dp(2);
         box.addView((View)valueView, (ViewGroup.LayoutParams)valueParams);
         GridLayout.LayoutParams params = new GridLayout.LayoutParams();
         params.width = 0;
-        params.height = this.dp(104);
+        params.height = this.dp(96);
         params.columnSpec = GridLayout.spec((int)Integer.MIN_VALUE, (float)1.0f);
         params.setMargins(this.dp(5), this.dp(7), this.dp(5), this.dp(7));
         grid.addView((View)box, (ViewGroup.LayoutParams)params);
@@ -2069,7 +2359,7 @@ TrafficRunnerService.Listener {
         Button button = new Button((Context)this);
         button.setText((CharSequence)text);
         button.setAllCaps(false);
-        button.setTextSize(20.0f);
+        button.setTextSize(19.0f);
         button.setTypeface(Typeface.DEFAULT, 1);
         button.setTextColor(this.theme.onPrimary);
         button.setBackground(this.runButtonBackground(false));
@@ -2083,6 +2373,16 @@ TrafficRunnerService.Listener {
         }
         this.startTrafficButton.setText((CharSequence)(running ? "\u6682\u505c" : "\u5f00\u59cb"));
         this.startTrafficButton.setBackground(this.runButtonBackground(running));
+        this.startTrafficButton.setTextColor(running ? this.rgb("#FFFFFF") : this.theme.onPrimary);
+        if (running) {
+            this.lift(this.startTrafficButton, 14);
+            this.startTrafficButton.setScaleX(1.02f);
+            this.startTrafficButton.setScaleY(1.02f);
+        } else {
+            this.lift(this.startTrafficButton, 3);
+            this.startTrafficButton.setScaleX(1.0f);
+            this.startTrafficButton.setScaleY(1.0f);
+        }
     }
 
     private Button roundButton(String text, boolean primary) {

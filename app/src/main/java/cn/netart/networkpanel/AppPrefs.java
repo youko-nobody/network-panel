@@ -6,7 +6,7 @@ import android.content.SharedPreferences;
 final class AppPrefs {
     static final String DEFAULT_DOWNLOAD_URL = "https://speed.cloudflare.com/__down?bytes=100000000";
     static final String DEFAULT_UPLOAD_URL = "https://speed.cloudflare.com/__up";
-    static final int THEME_COUNT = 10;
+    static final int THEME_COUNT = 16;
 
     private static final String NAME = "network_panel";
     private static final String KEY_DOWNLOAD_URL = "download_url";
@@ -16,6 +16,7 @@ final class AppPrefs {
     private static final String KEY_KEEP_SCREEN = "keep_screen";
     private static final String KEY_NOTIFY = "notify";
     private static final String KEY_THEME = "theme";
+    private static final String KEY_THEME_SCHEMA = "theme_schema";
 
     private AppPrefs() {
     }
@@ -48,11 +49,90 @@ final class AppPrefs {
     }
 
     static int readTheme(Context context) {
-        return clamp(open(context).getInt(KEY_THEME, 0), 0, THEME_COUNT - 1);
+        SharedPreferences prefs = open(context);
+        int theme = prefs.getInt(KEY_THEME, 0);
+        int schema = prefs.getInt(KEY_THEME_SCHEMA, 0);
+        int normalized = normalizeTheme(theme, schema);
+        if (schema < 3 || normalized != theme) {
+            prefs.edit()
+                    .putInt(KEY_THEME, normalized)
+                    .putInt(KEY_THEME_SCHEMA, 3)
+                    .apply();
+        }
+        return normalized;
     }
 
     static void writeTheme(Context context, int theme) {
-        open(context).edit().putInt(KEY_THEME, clamp(theme, 0, THEME_COUNT - 1)).apply();
+        open(context).edit()
+                .putInt(KEY_THEME, clamp(theme, 0, THEME_COUNT - 1))
+                .putInt(KEY_THEME_SCHEMA, 3)
+                .apply();
+    }
+
+    private static int normalizeTheme(int theme, int schema) {
+        if (schema < 2) {
+            switch (clamp(theme, 0, 9)) {
+                case 0:
+                    return 0;
+                case 1:
+                    return 1;
+                case 2:
+                    return 2;
+                case 3:
+                    return 3;
+                case 4:
+                    return 4;
+                case 5:
+                    return 5;
+                case 6:
+                    return 0;
+                case 7:
+                    return 6;
+                case 8:
+                    return 7;
+                case 9:
+                    return 8;
+                default:
+                    return 0;
+            }
+        }
+        if (schema == 2) {
+            switch (clamp(theme, 0, THEME_COUNT - 1)) {
+                case 0:
+                case 1:
+                case 9:
+                    return 0;
+                case 2:
+                    return 10;
+                case 3:
+                    return 11;
+                case 4:
+                    return 12;
+                case 5:
+                    return 13;
+                case 6:
+                    return 14;
+                case 7:
+                    return 15;
+                case 8:
+                    return 9;
+                case 10:
+                    return 1;
+                case 11:
+                    return 6;
+                case 12:
+                    return 7;
+                case 13:
+                    return 5;
+                case 14:
+                    return 8;
+                case 15:
+                    return 4;
+                default:
+                    return 0;
+            }
+        }
+        return clamp(theme, 0, THEME_COUNT - 1);
     }
 
     private static String nonBlank(String value, String fallback) {

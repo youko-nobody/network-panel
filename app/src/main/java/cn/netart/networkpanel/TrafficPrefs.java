@@ -26,7 +26,7 @@ final class TrafficPrefs {
     static List<TrafficTarget> readTargets(Context context) {
         SharedPreferences prefs = open(context);
         if (!prefs.contains(KEY_TARGETS)) {
-            return defaultTargets();
+            return new ArrayList<>();
         }
         String raw = prefs.getString(KEY_TARGETS, "");
         List<TrafficTarget> targets = new ArrayList<>();
@@ -46,23 +46,7 @@ final class TrafficPrefs {
                 ));
             }
         }
-        if (targets.isEmpty()) {
-            return targets;
-        }
-        if (isLegacyDefaultList(targets)) {
-            List<TrafficTarget> defaults = defaultTargets();
-            writeTargets(context, defaults);
-            return defaults;
-        }
         return targets;
-    }
-
-    static List<TrafficTarget> defaultTargets() {
-        List<TrafficTarget> defaults = new ArrayList<>();
-        defaults.add(new TrafficTarget("Cloudflare 100MB", "https://speed.cloudflare.com/__down?bytes=100000000", 4, true, true));
-        defaults.add(new TrafficTarget("Cloudflare 1GB", "https://speed.cloudflare.com/__down?bytes=1000000000", 4, true, true));
-        defaults.add(new TrafficTarget("Cachefly", "http://cachefly.cachefly.net/100mb.test", 4, true, true));
-        return defaults;
     }
 
     static void writeTargets(Context context, List<TrafficTarget> targets) {
@@ -182,21 +166,4 @@ final class TrafficPrefs {
         return Math.max(min, Math.min(max, value));
     }
 
-    private static boolean isLegacyDefaultList(List<TrafficTarget> targets) {
-        if (targets.size() != 3) {
-            return false;
-        }
-        return containsUrl(targets, "http://speedtest.tele2.net/100MB.zip")
-                && containsUrl(targets, "http://speedtest.tele2.net/1GB.zip")
-                && containsUrl(targets, "http://cachefly.cachefly.net/100mb.test");
-    }
-
-    private static boolean containsUrl(List<TrafficTarget> targets, String url) {
-        for (TrafficTarget target : targets) {
-            if (url.equals(target.url)) {
-                return true;
-            }
-        }
-        return false;
-    }
 }

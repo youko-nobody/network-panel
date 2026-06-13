@@ -42,6 +42,7 @@ public class TrafficRunnerService extends Service {
     private static final AtomicLong SESSION_BYTES = new AtomicLong(0);
     private static final AtomicLong RATE = new AtomicLong(0);
     private static final AtomicInteger ACTIVE_WORKERS = new AtomicInteger(0);
+    private static final AtomicInteger LAST_WORKERS = new AtomicInteger(0);
     private static final AtomicInteger RUN_ID = new AtomicInteger(0);
     private static volatile int targetCount;
     private static volatile String activeTarget = "--";
@@ -102,7 +103,7 @@ public class TrafficRunnerService extends Service {
                 SESSION_BYTES.get(),
                 total,
                 RATE.get(),
-                Math.max(0, ACTIVE_WORKERS.get()),
+                RUNNING.get() ? Math.max(0, ACTIVE_WORKERS.get()) : Math.max(0, LAST_WORKERS.get()),
                 targetCount,
                 activeTarget,
                 message
@@ -190,6 +191,7 @@ public class TrafficRunnerService extends Service {
         RUNNING.set(true);
         RATE.set(0);
         ACTIVE_WORKERS.set(0);
+        LAST_WORKERS.set(0);
         targetCount = targets.size();
         activeTarget = targets.get(0).displayName();
         message = "运行中";
@@ -302,6 +304,7 @@ public class TrafficRunnerService extends Service {
             executor.shutdownNow();
             executor = null;
         }
+        LAST_WORKERS.set(Math.max(0, ACTIVE_WORKERS.get()));
         ACTIVE_WORKERS.set(0);
         RATE.set(0);
         releaseWakeLock();
@@ -349,6 +352,7 @@ public class TrafficRunnerService extends Service {
                 return;
             }
             if (ACTIVE_WORKERS.compareAndSet(current, current - 1)) {
+                LAST_WORKERS.set(Math.max(0, current - 1));
                 return;
             }
         }
