@@ -61,7 +61,7 @@ final class TrafficPrefs {
                     .append(target.enhanced ? "1" : "0").append('\t')
                     .append(target.enabled ? "1" : "0");
         }
-        open(context).edit().putString(KEY_TARGETS, builder.toString()).apply();
+        open(context).edit().putString(KEY_TARGETS, builder.toString()).commit();
     }
 
     static int readLimitMb(Context context) {
@@ -121,7 +121,7 @@ final class TrafficPrefs {
     }
 
     static void writeActiveIndex(Context context, int index) {
-        open(context).edit().putInt(KEY_ACTIVE_INDEX, Math.max(0, index)).apply();
+        open(context).edit().putInt(KEY_ACTIVE_INDEX, Math.max(0, index)).commit();
     }
 
     private static String encode(String value) {

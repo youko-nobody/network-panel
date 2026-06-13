@@ -2164,7 +2164,7 @@ TrafficRunnerService.Listener {
         if (this.targets.isEmpty()) {
             return "\u6682\u65e0\u7ebf\u8def";
         }
-        int index = TrafficPrefs.readActiveIndex((Context)this, this.targets.size());
+        int index = this.activeTargetIndex;
         if (index < 0 || index >= this.targets.size()) {
             index = 0;
         }
