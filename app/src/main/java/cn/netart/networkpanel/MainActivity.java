@@ -14,6 +14,7 @@ import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.LayerDrawable;
 import android.graphics.Shader;
 import android.os.Build;
 import android.os.Bundle;
@@ -1791,7 +1792,16 @@ TrafficRunnerService.Listener {
 
     private Drawable runButtonBackground(boolean running) {
         if (running) {
-            return this.gradient(GradientDrawable.Orientation.LEFT_RIGHT, this.rgb("#FF3D5A"), this.rgb("#FFB14A"), 20, this.rgb("#FFEA9E"));
+            GradientDrawable fill = new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, new int[]{this.rgb("#FF3D5A"), this.rgb("#FFB14A")});
+            fill.setCornerRadius((float)this.dp(20));
+            GradientDrawable border = new GradientDrawable();
+            border.setColor(0);
+            border.setCornerRadius((float)this.dp(19));
+            border.setStroke(this.dp(1), this.rgb("#FFEA9E"));
+            LayerDrawable layer = new LayerDrawable(new Drawable[]{fill, border});
+            int inset = this.dp(2);
+            layer.setLayerInset(1, inset, inset, inset, inset);
+            return layer;
         }
         return this.gradient(GradientDrawable.Orientation.LEFT_RIGHT, this.theme.primaryStart, this.theme.primaryEnd, 16, 0);
     }
@@ -2374,15 +2384,14 @@ TrafficRunnerService.Listener {
         this.startTrafficButton.setText((CharSequence)(running ? "\u6682\u505c" : "\u5f00\u59cb"));
         this.startTrafficButton.setBackground(this.runButtonBackground(running));
         this.startTrafficButton.setTextColor(running ? this.rgb("#FFFFFF") : this.theme.onPrimary);
-        if (running) {
-            this.lift(this.startTrafficButton, 14);
-            this.startTrafficButton.setScaleX(1.02f);
-            this.startTrafficButton.setScaleY(1.02f);
-        } else {
-            this.lift(this.startTrafficButton, 3);
-            this.startTrafficButton.setScaleX(1.0f);
-            this.startTrafficButton.setScaleY(1.0f);
+        this.startTrafficButton.setScaleX(1.0f);
+        this.startTrafficButton.setScaleY(1.0f);
+        this.startTrafficButton.setAlpha(1.0f);
+        if (Build.VERSION.SDK_INT >= 21) {
+            this.startTrafficButton.setElevation(0.0f);
+            this.startTrafficButton.setTranslationZ(0.0f);
         }
+        this.styleFlatButton(this.startTrafficButton, 18, 14, 18);
     }
 
     private Button roundButton(String text, boolean primary) {
