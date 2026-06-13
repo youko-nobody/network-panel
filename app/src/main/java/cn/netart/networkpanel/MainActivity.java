@@ -509,6 +509,8 @@ TrafficRunnerService.Listener {
 
     private void returnHome() {
         this.settingsPageVisible = false;
+        this.targetListContainer = null;
+        this.targetSpinner = null;
         this.setContentView(this.buildContent());
         this.applySavedState();
         this.refreshRateLimitLabel();
@@ -773,6 +775,7 @@ TrafficRunnerService.Listener {
         LinearLayout panel = this.vertical();
         panel.setBackground(this.sectionBackground());
         panel.setPadding(this.dp(14), this.dp(12), this.dp(14), this.dp(12));
+        this.targetSpinner = null;
         this.targetListContainer = this.vertical();
         panel.addView((View)this.targetListContainer, (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(-1, -2));
         this.linkNameEdit = this.input("\u540d\u79f0\uff0c\u4f8b\u5982\uff1a\u54aa\u5495\u89c6\u9891 / Cloudflare");
@@ -1147,26 +1150,27 @@ TrafficRunnerService.Listener {
     }
 
     private void refreshTargetList() {
-        if (this.targetListContainer == null) {
-            this.refreshTargetSpinner();
-            return;
+        this.normalizeActiveTargetState();
+        LinearLayout listContainer = this.targetListContainer;
+        if (listContainer != null) {
+            listContainer.removeAllViews();
         }
-        this.targetListContainer.removeAllViews();
         if (this.targets.isEmpty()) {
-            TextView empty = this.text("\u6682\u65e0\u94fe\u63a5\uff0c\u8bf7\u6dfb\u52a0\u4e00\u4e2a\u4e0b\u8f7d\u94fe\u63a5\u3002", 13, this.MUTED, 0);
-            empty.setPadding(this.dp(2), this.dp(2), this.dp(2), this.dp(6));
-            this.targetListContainer.addView((View)empty, (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(-1, -2));
+            if (listContainer != null) {
+                TextView empty = this.text("\u6682\u65e0\u94fe\u63a5\uff0c\u8bf7\u6dfb\u52a0\u4e00\u4e2a\u4e0b\u8f7d\u94fe\u63a5\u3002", 13, this.MUTED, 0);
+                empty.setPadding(this.dp(2), this.dp(2), this.dp(2), this.dp(6));
+                listContainer.addView((View)empty, (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(-1, -2));
+            }
             this.refreshTargetSpinner();
-        } else {
-            this.activeTargetIndex = TrafficPrefs.readActiveIndex((Context)this, this.targets.size());
-            TrafficTarget selected = this.targets.get(this.activeTargetIndex);
-            this.currentThreadValue = selected.threads;
+        } else if (listContainer != null) {
             this.refreshTargetSpinner();
             for (int i = 0; i < this.targets.size(); ++i) {
                 LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(-1, -2);
                 rowParams.topMargin = i == 0 ? 0 : this.dp(8);
-                this.targetListContainer.addView(this.targetRow(i), (ViewGroup.LayoutParams)rowParams);
+                listContainer.addView(this.targetRow(i), (ViewGroup.LayoutParams)rowParams);
             }
+        } else {
+            this.refreshTargetSpinner();
         }
         if (this.trafficWorkersText != null) {
             this.updateMetric(this.trafficWorkersText, this.targets.isEmpty() ? "--" : this.currentThreadValue + " \u7ebf\u7a0b");
@@ -1174,6 +1178,15 @@ TrafficRunnerService.Listener {
         if (this.routeSummaryText != null) {
             this.updateMetric(this.routeSummaryText, this.currentRouteName());
         }
+    }
+
+    private void normalizeActiveTargetState() {
+        if (this.targets.isEmpty()) {
+            this.activeTargetIndex = 0;
+            return;
+        }
+        this.activeTargetIndex = Math.max(0, Math.min(this.targets.size() - 1, this.activeTargetIndex));
+        this.currentThreadValue = this.targets.get(this.activeTargetIndex).threads;
     }
 
     private View targetRow(final int index) {
