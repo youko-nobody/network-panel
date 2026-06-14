@@ -100,4 +100,3 @@ jobs:
           files: network-panel-${{ github.ref_name }}.apk
           name: 网络面板 ${{ github.ref_name }}
           body_path: release-notes.md
-          generate_release_notes: true

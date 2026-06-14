@@ -149,6 +149,7 @@ TrafficRunnerService.Listener {
 
     protected void onResume() {
         super.onResume();
+        this.applyWakeFlag(true);
         TrafficRunnerService.addListener(this);
         this.refreshRateLimitLabel();
         this.handler.post(this.latencyRefreshRunnable);
@@ -157,6 +158,7 @@ TrafficRunnerService.Listener {
     protected void onPause() {
         TrafficRunnerService.removeListener(this);
         this.handler.removeCallbacks(this.latencyRefreshRunnable);
+        this.applyWakeFlag(false);
         super.onPause();
     }
 
@@ -489,7 +491,7 @@ TrafficRunnerService.Listener {
         this.enhancedSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> TrafficPrefs.writeEnhanced((Context)this, isChecked));
         this.wakeSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
             TrafficPrefs.writeKeepAwake((Context)this, isChecked);
-            this.applyWakeFlag(isChecked);
+            this.applyWakeFlag(true);
         });
         this.notificationSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
             this.settings = this.settings.withNotificationEnabled(isChecked);
@@ -504,7 +506,7 @@ TrafficRunnerService.Listener {
     private void showSettingsPage() {
         this.settingsPageVisible = true;
         this.setContentView(this.buildSettingsContent());
-        this.applyWakeFlag(this.isKeepAwakeEnabled());
+        this.applyWakeFlag(true);
     }
 
     private void returnHome() {
@@ -836,7 +838,7 @@ TrafficRunnerService.Listener {
         this.activeTargetIndex = TrafficPrefs.readActiveIndex((Context)this, this.targets.size());
         this.currentThreadValue = this.targets.isEmpty() ? this.currentThreadValue : this.targets.get((int)this.activeTargetIndex).threads;
         this.refreshTargetList();
-        this.applyWakeFlag(this.isKeepAwakeEnabled());
+        this.applyWakeFlag(true);
     }
 
     private void toggleTraffic() {
