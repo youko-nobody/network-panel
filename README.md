@@ -1,30 +1,32 @@
-# 网络面板
+# 网络面板 Android
 
-网络面板是一个原生 Android 网络流量工具，适合查看实时网速、累计流量、本次消耗和运行线程，并提供流量线路、速率上限、流量上限、锁屏运行和多主题切换等功能。
-
-## 下载
-
-游客可以在 GitHub Releases 页面直接下载 APK：
-
-[下载最新版 APK](https://github.com/youko-nobody/network-panel/releases/latest)
-
-如果还没有 Release，请先查看 [发布指南](docs/RELEASE.md) 生成并上传正式 APK。
+网络面板是一个原生 Android 网络工具，用于查看实时速率、管理测试线路、记录数据用量，并辅助判断当前网络连接质量。应用采用原生 Java 实现，支持多主题、地区延迟检测、通知栏控制和后台运行相关设置。
 
 ## 功能
 
-- 实时网速：同时显示 `MB/s` 和 `Mbps`
-- 流量统计：显示总流量和本次消耗，支持 TB 级显示
-- 跑流量控制：一个主按钮完成开始和暂停
-- 线路选择：支持切换和管理流量线路
-- 运行设置：线程数、速率上限、本次流量上限、锁屏运行、增强并发、通知栏控制
-- 延迟检测：支持地区延迟检测展示
-- 主题切换：内置多套浅色、深色和季节配色主题
+- 实时速率显示：同时展示 `MB/s` 与 `Mbps`，便于快速观察当前网络吞吐状态。
+- 数据用量统计：分别记录累计用量与本次会话用量，支持 TB 级显示和手动清零。
+- 线路管理：支持添加、选择、编辑和删除测试地址，适合对比多条网络线路的可用性。
+- 并发线程设置：可调整运行线程数，便于在不同网络环境下进行强度控制。
+- 速率与用量上限：支持设置速率上限和本次会话用量上限，避免占用过多带宽。
+- 地区延迟检测：自动检测可用地区节点延迟，检测不到时不会展示无效数据。
+- 后台与通知栏：支持锁屏运行、增强并发和通知栏操作按钮。
+- 多主题外观：内置多套浅色、深色和季节配色主题。
+- 项目地址入口：首页内置 Android 与 iOS 两个 GitHub 项目地址，方便查看源码和版本更新。
+- GitHub Actions 构建：推送版本标签后可自动构建并发布 APK。
 
-## 截图
+## 下载安装
 
-项目发布后可以在 README 中补充正式截图。请不要提交包含私人信息、聊天记录、设备信息或未授权素材的图片。
+游客可以在 GitHub Release 页面直接下载最新版 APK：
 
-## 构建
+[下载最新版 APK](https://github.com/youko-nobody/network-panel/releases/latest)
+
+## 相关项目
+
+- Android 项目：[youko-nobody/network-panel](https://github.com/youko-nobody/network-panel)
+- iOS 项目：[youko-nobody/network-panel-ios](https://github.com/youko-nobody/network-panel-ios)
+
+## 构建说明
 
 推荐使用 Android Studio 打开项目，或使用 Gradle Wrapper 构建。
 
@@ -46,11 +48,9 @@ macOS / Linux：
 app/build/outputs/apk/debug/
 ```
 
-## 发布正式 APK
+## 发布说明
 
-正式 APK 应使用本地 keystore 签名，签名文件和密码不要提交到仓库。
-
-详细步骤见：
+正式 APK 应使用本地 keystore 签名，签名文件和密码不要提交到仓库。详细步骤见：
 
 [docs/RELEASE.md](docs/RELEASE.md)
 
@@ -72,9 +72,9 @@ app/build/outputs/apk/debug/
 - 参考 APK 拆包内容
 - 私人截图或个人信息
 
-## 隐私
+## 注意
 
-网络面板不包含广告 SDK、统计 SDK 或第三方追踪服务。更多说明见 [PRIVACY.md](PRIVACY.md)。
+网络面板不包含广告 SDK、统计 SDK 或第三方追踪服务。后台持续运行能力受 Android 系统策略、设备厂商、电量模式和网络环境影响，实际表现可能因设备而不同。更多说明见 [PRIVACY.md](PRIVACY.md)。
 
 ## License
 

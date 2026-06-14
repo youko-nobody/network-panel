@@ -75,7 +75,7 @@ jobs:
           {
             echo "## 网络面板 ${GITHUB_REF_NAME}"
             echo
-            echo "原生 Android 网络流量面板正式版。"
+            echo "原生 Android 网络工具正式版。"
             echo
             echo "### 更新内容"
             echo
