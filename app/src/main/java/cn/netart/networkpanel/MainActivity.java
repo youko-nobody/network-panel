@@ -16,7 +16,6 @@ import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.LayerDrawable;
 import android.graphics.Shader;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -294,7 +293,6 @@ TrafficRunnerService.Listener {
         panel.addView(this.buildCommandCenter(), (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(-1, this.dp(322)));
         panel.addView(this.buildControlDeck(), (ViewGroup.LayoutParams)this.topMargin(12));
         panel.addView(this.buildRegionLatencyPanel(), (ViewGroup.LayoutParams)this.topMargin(14));
-        panel.addView(this.buildProjectLinksPanel(), (ViewGroup.LayoutParams)this.topMargin(14));
         this.startTrafficButton.setOnClickListener(v -> this.toggleTraffic());
         this.updateMetric(this.trafficTotalText, Formatters.bytes(TrafficPrefs.readTotalBytes((Context)this)));
         this.updateMetric(this.sessionText, "--");
@@ -431,42 +429,6 @@ TrafficRunnerService.Listener {
         startParams.topMargin = this.dp(14);
         deck.addView((View)this.startTrafficButton, (ViewGroup.LayoutParams)startParams);
         return deck;
-    }
-
-    private View buildProjectLinksPanel() {
-        LinearLayout panel = this.vertical();
-        panel.setBackground(this.sectionBackground());
-        panel.setPadding(this.dp(14), this.dp(12), this.dp(14), this.dp(12));
-        TextView title = this.text("\u9879\u76ee\u5730\u5740", 15, this.theme.text, 1);
-        panel.addView((View)title, (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(-1, -2));
-        panel.addView(this.projectLinkRow("Android \u9879\u76ee", "https://github.com/youko-nobody/network-panel"), (ViewGroup.LayoutParams)this.topMargin(10));
-        panel.addView(this.projectLinkRow("iOS \u9879\u76ee", "https://github.com/youko-nobody/network-panel-ios"), (ViewGroup.LayoutParams)this.topMargin(8));
-        return panel;
-    }
-
-    private View projectLinkRow(String title, String url) {
-        LinearLayout row = this.vertical();
-        row.setBackground(this.rounded(this.theme.surface, 16, 1, this.theme.line));
-        row.setPadding(this.dp(12), this.dp(10), this.dp(12), this.dp(10));
-        row.setClickable(true);
-        row.setOnClickListener(v -> this.openUrl(url));
-        TextView titleView = this.text(title, 14, this.theme.text, 1);
-        row.addView((View)titleView, (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(-1, -2));
-        TextView urlView = this.text(url, 11, this.theme.muted, 1);
-        urlView.setSingleLine(true);
-        urlView.setEllipsize(TextUtils.TruncateAt.END);
-        LinearLayout.LayoutParams urlParams = new LinearLayout.LayoutParams(-1, -2);
-        urlParams.topMargin = this.dp(3);
-        row.addView((View)urlView, (ViewGroup.LayoutParams)urlParams);
-        return row;
-    }
-
-    private void openUrl(String url) {
-        try {
-            this.startActivity(new Intent("android.intent.action.VIEW", Uri.parse((String)url)));
-        } catch (Exception ignored) {
-            Toast.makeText((Context)this, (CharSequence)"\u65e0\u6cd5\u6253\u5f00\u94fe\u63a5", (int)0).show();
-        }
     }
 
     private TextView controlCell(LinearLayout parent, String label, String value, String actionText, View.OnClickListener click) {
