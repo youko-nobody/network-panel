@@ -2,6 +2,8 @@ package cn.netart.networkpanel;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.ColorStateList;
@@ -21,6 +23,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
+import android.text.InputType;
 import android.text.TextUtils;
 import android.view.View;
 import android.view.ViewGroup;
@@ -57,8 +60,11 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -67,6 +73,8 @@ extends Activity
 implements SpeedTestEngine.Listener,
 TrafficRunnerService.Listener {
     private static final int REQ_NOTIFICATIONS = 41;
+    private static final Pattern HTTP_URL_PATTERN = Pattern.compile("https?://[^\\s，,|]+", Pattern.CASE_INSENSITIVE);
+    private static final Pattern IMPORT_TOKEN_PATTERN = Pattern.compile("[^\\s，,|]+");
     private int TEXT;
     private int MUTED;
     private int BLUE;
@@ -794,7 +802,12 @@ TrafficRunnerService.Listener {
         buttons.addView((View)new Space((Context)this), (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(this.dp(10), 1));
         Button clear = this.actionButton("\u6e05\u7a7a\u94fe\u63a5", false);
         buttons.addView((View)clear, (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(0, this.dp(44), 1.0f));
+        Button importNodes = this.actionButton("\u4e00\u952e\u5bfc\u5165\u8282\u70b9", false);
+        LinearLayout.LayoutParams importParams = this.topMargin(10);
+        importParams.height = this.dp(44);
+        panel.addView((View)importNodes, (ViewGroup.LayoutParams)importParams);
         add.setOnClickListener(v -> this.addTarget());
+        importNodes.setOnClickListener(v -> this.showImportNodesDialog());
         clear.setOnClickListener(v -> {
             this.targets.clear();
             TrafficPrefs.writeTargets((Context)this, this.targets);
@@ -1149,6 +1162,242 @@ TrafficRunnerService.Listener {
         this.linkUrlEdit.setText((CharSequence)"");
         this.refreshTargetList();
         this.appendLog("\u5df2\u6dfb\u52a0\u94fe\u63a5\uff1a" + url);
+    }
+
+    private void showImportNodesDialog() {
+        LinearLayout root = this.vertical();
+        root.setPadding(this.dp(20), this.dp(18), this.dp(20), this.dp(18));
+        root.setBackground(this.panelBackground());
+        TextView title = this.text("\u4e00\u952e\u5bfc\u5165\u8282\u70b9", 20, this.TEXT, 1);
+        title.setPadding(this.dp(2), 0, this.dp(2), this.dp(8));
+        root.addView((View)title, (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(-1, -2));
+        TextView tip = this.text("\u6bcf\u884c\u4e00\u4e2a\u8282\u70b9\uff0c\u652f\u6301\u201c\u540d\u79f0 \u94fe\u63a5\u201d\u3001\u201c\u540d\u79f0,\u94fe\u63a5\u201d\u6216\u76f4\u63a5\u7c98\u8d34\u94fe\u63a5\u3002", 12, this.MUTED, 0);
+        tip.setPadding(this.dp(2), 0, this.dp(2), this.dp(10));
+        root.addView((View)tip, (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(-1, -2));
+        final EditText input = new EditText((Context)this);
+        input.setTextSize(13.0f);
+        input.setTextColor(this.TEXT);
+        input.setHintTextColor(this.HINT);
+        input.setHint((CharSequence)"\u79fb\u52a8\u4e91\u76d8 https://example.com/file.zip");
+        input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+        input.setSingleLine(false);
+        input.setMinLines(6);
+        input.setMaxLines(10);
+        input.setGravity(48);
+        input.setPadding(this.dp(14), this.dp(12), this.dp(14), this.dp(12));
+        input.setBackground(this.inputBackground());
+        String clipboard = this.clipboardText();
+        if (!clipboard.isEmpty()) {
+            input.setText((CharSequence)clipboard);
+            input.setSelection(input.getText().length());
+        }
+        root.addView((View)input, (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(-1, this.dp(180)));
+        LinearLayout buttons = new LinearLayout((Context)this);
+        buttons.setOrientation(0);
+        LinearLayout.LayoutParams buttonRowParams = new LinearLayout.LayoutParams(-1, -2);
+        buttonRowParams.topMargin = this.dp(18);
+        root.addView((View)buttons, (ViewGroup.LayoutParams)buttonRowParams);
+        TextView cancel = this.dialogActionButton("\u53d6\u6d88", false);
+        buttons.addView((View)cancel, (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(0, this.dp(42), 1.0f));
+        buttons.addView((View)new Space((Context)this), (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(this.dp(10), 1));
+        TextView importButton = this.dialogActionButton("\u5bfc\u5165", true);
+        buttons.addView((View)importButton, (ViewGroup.LayoutParams)new LinearLayout.LayoutParams(0, this.dp(42), 1.0f));
+        AlertDialog dialog = new AlertDialog.Builder((Context)this).setView((View)root).show();
+        cancel.setOnClickListener(v -> dialog.dismiss());
+        importButton.setOnClickListener(v -> {
+            ImportResult result = this.importTargetsFromText(input.getText().toString());
+            if (result.imported > 0) {
+                dialog.dismiss();
+            }
+        });
+        Window window = dialog.getWindow();
+        if (window != null) {
+            window.setBackgroundDrawable((Drawable)new ColorDrawable(0));
+        }
+    }
+
+    private String clipboardText() {
+        ClipboardManager manager = (ClipboardManager)this.getSystemService(Context.CLIPBOARD_SERVICE);
+        if (manager == null || !manager.hasPrimaryClip()) {
+            return "";
+        }
+        ClipData clip = manager.getPrimaryClip();
+        if (clip == null || clip.getItemCount() == 0) {
+            return "";
+        }
+        CharSequence text = clip.getItemAt(0).coerceToText((Context)this);
+        return text == null ? "" : text.toString().trim();
+    }
+
+    private ImportResult importTargetsFromText(String raw) {
+        if (raw == null || raw.trim().isEmpty()) {
+            Toast.makeText((Context)this, (CharSequence)"\u8bf7\u7c98\u8d34\u8282\u70b9\u5185\u5bb9", (int)0).show();
+            return new ImportResult(0, 0);
+        }
+        int originalCount = this.targets.size();
+        int imported = 0;
+        int skipped = 0;
+        int firstImportedIndex = -1;
+        HashSet<String> knownUrls = new HashSet<String>();
+        for (TrafficTarget target : this.targets) {
+            knownUrls.add(this.duplicateUrlKey(target.url));
+        }
+        String[] lines = raw.split("\\r?\\n");
+        for (String line : lines) {
+            ParsedImportTarget parsed = this.parseImportTargetLine(line, imported + skipped + 1);
+            if (parsed == null) {
+                if (line != null && !line.trim().isEmpty()) {
+                    ++skipped;
+                }
+                continue;
+            }
+            String key = this.duplicateUrlKey(parsed.url);
+            if (key.isEmpty() || knownUrls.contains(key)) {
+                ++skipped;
+                continue;
+            }
+            this.targets.add(new TrafficTarget(parsed.name, parsed.url, this.currentThreads(), this.isEnhancedEnabled(), true));
+            knownUrls.add(key);
+            if (firstImportedIndex < 0) {
+                firstImportedIndex = this.targets.size() - 1;
+            }
+            ++imported;
+        }
+        if (imported > 0) {
+            if (originalCount == 0 && firstImportedIndex >= 0) {
+                this.activeTargetIndex = firstImportedIndex;
+            }
+            this.normalizeActiveTargetState();
+            TrafficPrefs.writeTargets((Context)this, this.targets);
+            TrafficPrefs.writeActiveIndex((Context)this, this.activeTargetIndex);
+            this.refreshTargetList();
+            this.appendLog("\u5df2\u5bfc\u5165\u8282\u70b9\uff1a" + imported + "\u6761");
+            Toast.makeText((Context)this, (CharSequence)("\u5df2\u5bfc\u5165 " + imported + " \u6761\uff0c\u8df3\u8fc7 " + skipped + " \u6761"), (int)0).show();
+        } else {
+            Toast.makeText((Context)this, (CharSequence)("\u6ca1\u6709\u53ef\u5bfc\u5165\u7684\u8282\u70b9\uff0c\u8df3\u8fc7 " + skipped + " \u6761"), (int)0).show();
+        }
+        return new ImportResult(imported, skipped);
+    }
+
+    private ParsedImportTarget parseImportTargetLine(String line, int fallbackIndex) {
+        String trimmed = line == null ? "" : line.trim();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+        String rawUrl = "";
+        int start = -1;
+        int end = -1;
+        Matcher urlMatcher = HTTP_URL_PATTERN.matcher(trimmed);
+        if (urlMatcher.find()) {
+            rawUrl = urlMatcher.group();
+            start = urlMatcher.start();
+            end = urlMatcher.end();
+        } else {
+            Matcher tokenMatcher = IMPORT_TOKEN_PATTERN.matcher(trimmed);
+            while (tokenMatcher.find()) {
+                String candidate = this.trimUrlToken(tokenMatcher.group());
+                if (this.looksLikeUrlCandidate(candidate)) {
+                    rawUrl = candidate;
+                    start = tokenMatcher.start();
+                    end = tokenMatcher.end();
+                    break;
+                }
+            }
+        }
+        String url = this.normalizeImportUrl(rawUrl);
+        if (url.isEmpty()) {
+            return null;
+        }
+        String nameSource = "";
+        if (start > 0) {
+            nameSource = trimmed.substring(0, start);
+        }
+        if (nameSource.trim().isEmpty() && end >= 0 && end < trimmed.length()) {
+            nameSource = trimmed.substring(end);
+        }
+        String name = this.cleanImportName(nameSource);
+        if (name.isEmpty()) {
+            name = this.importHostName(url, fallbackIndex);
+        }
+        return new ParsedImportTarget(name, url);
+    }
+
+    private boolean looksLikeUrlCandidate(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return false;
+        }
+        String lower = value.trim().toLowerCase(Locale.US);
+        if (lower.startsWith("http://") || lower.startsWith("https://")) {
+            return true;
+        }
+        return lower.contains(".") && (lower.startsWith("www.") || lower.contains("/") || lower.matches(".*[a-z].*"));
+    }
+
+    private String normalizeImportUrl(String value) {
+        String trimmed = this.trimUrlToken(value);
+        if (trimmed.isEmpty()) {
+            return "";
+        }
+        String lower = trimmed.toLowerCase(Locale.US);
+        if (!lower.startsWith("http://") && !lower.startsWith("https://")) {
+            trimmed = "https://" + trimmed;
+        }
+        try {
+            URL url = new URL(trimmed);
+            String protocol = url.getProtocol() == null ? "" : url.getProtocol().toLowerCase(Locale.US);
+            if (!("http".equals(protocol) || "https".equals(protocol)) || url.getHost() == null || url.getHost().trim().isEmpty()) {
+                return "";
+            }
+            return url.toString();
+        } catch (Exception ignored) {
+            return "";
+        }
+    }
+
+    private String duplicateUrlKey(String value) {
+        String normalized = this.normalizeImportUrl(value);
+        return normalized.isEmpty() ? "" : normalized.toLowerCase(Locale.US);
+    }
+
+    private String cleanImportName(String value) {
+        String name = value == null ? "" : value.trim();
+        while (name.startsWith(",") || name.startsWith("\uff0c") || name.startsWith("|") || name.startsWith(":") || name.startsWith("\uff1a") || name.startsWith("-")) {
+            name = name.substring(1).trim();
+        }
+        while (name.endsWith(",") || name.endsWith("\uff0c") || name.endsWith("|") || name.endsWith(":") || name.endsWith("\uff1a") || name.endsWith("-")) {
+            name = name.substring(0, name.length() - 1).trim();
+        }
+        if ((name.startsWith("\"") && name.endsWith("\"")) || (name.startsWith("'") && name.endsWith("'"))) {
+            name = name.substring(1, name.length() - 1).trim();
+        }
+        return name;
+    }
+
+    private String trimUrlToken(String value) {
+        String token = value == null ? "" : value.trim();
+        while (token.startsWith("\"") || token.startsWith("'") || token.startsWith("(") || token.startsWith("[") || token.startsWith("<")) {
+            token = token.substring(1).trim();
+        }
+        while (token.endsWith("\"") || token.endsWith("'") || token.endsWith(")") || token.endsWith("]") || token.endsWith(">") || token.endsWith(".") || token.endsWith(";") || token.endsWith(",")) {
+            token = token.substring(0, token.length() - 1).trim();
+        }
+        return token;
+    }
+
+    private String importHostName(String url, int fallbackIndex) {
+        try {
+            String host = new URL(url).getHost();
+            if (host != null && !host.trim().isEmpty()) {
+                String cleaned = host.trim();
+                if (cleaned.toLowerCase(Locale.US).startsWith("www.")) {
+                    cleaned = cleaned.substring(4);
+                }
+                return cleaned;
+            }
+        } catch (Exception ignored) {
+            // Use a stable fallback below.
+        }
+        return "\u5bfc\u5165\u8282\u70b9 " + Math.max(1, fallbackIndex);
     }
 
     private void refreshTargetList() {
@@ -2594,6 +2843,26 @@ TrafficRunnerService.Listener {
         HttpTextResult(long latencyMillis, String body) {
             this.latencyMillis = latencyMillis;
             this.body = body;
+        }
+    }
+
+    private static final class ImportResult {
+        final int imported;
+        final int skipped;
+
+        ImportResult(int imported, int skipped) {
+            this.imported = imported;
+            this.skipped = skipped;
+        }
+    }
+
+    private static final class ParsedImportTarget {
+        final String name;
+        final String url;
+
+        ParsedImportTarget(String name, String url) {
+            this.name = name;
+            this.url = url;
         }
     }
 
