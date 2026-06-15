@@ -14,6 +14,22 @@
 - 多主题外观：内置多套浅色、深色和季节配色主题。
 - GitHub Actions 构建：推送版本标签后可自动构建并发布 APK。
 
+## 界面预览
+
+<p>
+  <img src="docs/images/android-home.jpg" alt="网络面板 Android 首页" width="280">
+  <img src="docs/images/iphone-light.jpg" alt="网络面板 iPhone 浅色主题" width="280">
+  <img src="docs/images/iphone-compact.jpg" alt="网络面板 iPhone 紧凑布局" width="280">
+</p>
+
+<p>
+  <img src="docs/images/ipad-light-landscape.jpg" alt="网络面板 iPad 横屏浅色主题" width="760">
+</p>
+
+<p>
+  <img src="docs/images/ipad-dark-landscape.jpg" alt="网络面板 iPad 横屏深色主题" width="760">
+</p>
+
 ## 下载安装
 
 游客可以在 GitHub Release 页面直接下载最新版 APK：
