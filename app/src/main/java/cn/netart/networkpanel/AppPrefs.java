@@ -6,7 +6,7 @@ import android.content.SharedPreferences;
 final class AppPrefs {
     static final String DEFAULT_DOWNLOAD_URL = "https://speed.cloudflare.com/__down?bytes=100000000";
     static final String DEFAULT_UPLOAD_URL = "https://speed.cloudflare.com/__up";
-    static final int THEME_COUNT = 16;
+    static final int THEME_COUNT = 17;
 
     private static final String NAME = "network_panel";
     private static final String KEY_DOWNLOAD_URL = "download_url";

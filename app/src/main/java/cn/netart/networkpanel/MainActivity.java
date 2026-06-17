@@ -60,6 +60,7 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -73,6 +74,7 @@ extends Activity
 implements SpeedTestEngine.Listener,
 TrafficRunnerService.Listener {
     private static final int REQ_NOTIFICATIONS = 41;
+    private static final int TIMEFLOW_THEME_ID = 16;
     private static final Pattern HTTP_URL_PATTERN = Pattern.compile("https?://[^\\s，,|]+", Pattern.CASE_INSENSITIVE);
     private static final Pattern IMPORT_TOKEN_PATTERN = Pattern.compile("[^\\s，,|]+");
     private int TEXT;
@@ -130,12 +132,27 @@ TrafficRunnerService.Listener {
     private static final String CLOUDFLARE_TRACE_URL = "https://cp.cloudflare.com/cdn-cgi/trace";
     private static final String[] TRAFFIC_LIMIT_UNITS = new String[]{"MB", "GB", "TB"};
     private static final int[] TRAFFIC_LIMIT_UNIT_FACTORS_MB = new int[]{1, 1024, 0x100000};
+    private int currentTimeflowSlot = -1;
     private final Runnable latencyRefreshRunnable = new Runnable(){
 
         @Override
         public void run() {
             MainActivity.this.refreshRegionLatency();
             MainActivity.this.handler.postDelayed((Runnable)this, 30000L);
+        }
+    };
+    private final Runnable timeflowRefreshRunnable = new Runnable(){
+
+        @Override
+        public void run() {
+            if (MainActivity.this.currentThemeId == TIMEFLOW_THEME_ID) {
+                int slot = MainActivity.this.timeflowSlot();
+                if (slot != MainActivity.this.currentTimeflowSlot) {
+                    MainActivity.this.recreate();
+                    return;
+                }
+                MainActivity.this.handler.postDelayed((Runnable)this, 60000L);
+            }
         }
     };
     private static final int MATCH = -1;
@@ -161,11 +178,13 @@ TrafficRunnerService.Listener {
         TrafficRunnerService.addListener(this);
         this.refreshRateLimitLabel();
         this.handler.post(this.latencyRefreshRunnable);
+        this.startTimeflowWatcher();
     }
 
     protected void onPause() {
         TrafficRunnerService.removeListener(this);
         this.handler.removeCallbacks(this.latencyRefreshRunnable);
+        this.handler.removeCallbacks(this.timeflowRefreshRunnable);
         this.applyWakeFlag(false);
         super.onPause();
     }
@@ -1956,6 +1975,13 @@ TrafficRunnerService.Listener {
         this.recreate();
     }
 
+    private void startTimeflowWatcher() {
+        this.handler.removeCallbacks(this.timeflowRefreshRunnable);
+        if (this.currentThemeId == TIMEFLOW_THEME_ID) {
+            this.handler.postDelayed(this.timeflowRefreshRunnable, 60000L);
+        }
+    }
+
     private ThemePalette themeFor(int id) {
         switch (id) {
             case 0: {
@@ -2006,8 +2032,55 @@ TrafficRunnerService.Listener {
             case 15: {
                 return new ThemePalette("\u7ea2", true, this.rgb("#10090B"), this.rgb("#161013"), this.rgb("#1A1214"), this.rgb("#20171A"), this.rgb("#F3E7EA"), this.rgb("#B79BA5"), this.rgb("#8F7A84"), this.rgb("#D46B7A"), this.rgb("#A58AA0"), this.rgb("#C96C7E"), this.rgb("#E58C8C"), this.rgb("#2F2328"), this.rgb("#3D2E34"), this.rgb("#BDA8AF"), this.rgb("#22181D"), this.rgb("#2B1820"), this.rgb("#4A2530"), this.rgb("#27171B"), this.rgb("#140E11"), this.rgb("#D46B7A"), this.rgb("#C05F6C"), this.rgb("#D46B7A"), this.rgb("#A64D5D"), this.rgb("#FAF0F2"));
             }
+            case TIMEFLOW_THEME_ID: {
+                return this.timeflowTheme();
+            }
         }
         return this.themeFor(0);
+    }
+
+    private ThemePalette timeflowTheme() {
+        int slot = this.timeflowSlot();
+        this.currentTimeflowSlot = slot;
+        switch (slot) {
+            case 0:
+                return new ThemePalette("\u9ece\u660e", true, this.rgb("#111827"), this.rgb("#1E2540"), this.rgb("#20283A"), this.rgb("#263046"), this.rgb("#EEF2FF"), this.rgb("#B8C0D9"), this.rgb("#8E98B7"), this.rgb("#AEB7FF"), this.rgb("#F0A7B8"), this.rgb("#88D0C5"), this.rgb("#F49AB2"), this.rgb("#343E5A"), this.rgb("#3E4865"), this.rgb("#BFC6DF"), this.rgb("#2A334B"), this.rgb("#1E3A3F"), this.rgb("#315C61"), this.rgb("#252B4B"), this.rgb("#332543"), this.rgb("#AEB7FF"), this.rgb("#F0A7B8"), this.rgb("#8FA4FF"), this.rgb("#DA89A4"), this.rgb("#F6F7FF"));
+            case 1:
+                return new ThemePalette("\u65e5\u51fa", false, this.rgb("#FFF3E6"), this.rgb("#FFE0B8"), this.rgb("#FFF9F1"), this.rgb("#FFF2E2"), this.rgb("#30231B"), this.rgb("#806452"), this.rgb("#B08A70"), this.rgb("#E88945"), this.rgb("#FFB36B"), this.rgb("#6FA46A"), this.rgb("#C65F4C"), this.rgb("#E8CFB5"), this.rgb("#EDD9C3"), this.rgb("#A78366"), this.rgb("#FFF4E8"), this.rgb("#F0FAE9"), this.rgb("#CFE8BC"), this.rgb("#FFE8BF"), this.rgb("#FFD194"), this.rgb("#FFB36B"), this.rgb("#E88945"), this.rgb("#D7803D"), this.rgb("#B96331"), this.rgb("#FFFFFF"));
+            case 2:
+                return new ThemePalette("\u6e05\u6668", false, this.rgb("#EEF8EC"), this.rgb("#DCEFD8"), this.rgb("#FBFFF8"), this.rgb("#F2FAEF"), this.rgb("#203020"), this.rgb("#62745B"), this.rgb("#94A88A"), this.rgb("#77A96B"), this.rgb("#A7C987"), this.rgb("#4FA66F"), this.rgb("#C7655C"), this.rgb("#D7E9D2"), this.rgb("#E0EBDD"), this.rgb("#81977B"), this.rgb("#F1FAEE"), this.rgb("#EDF8E9"), this.rgb("#CFE8C5"), this.rgb("#E5F5DF"), this.rgb("#D7EECF"), this.rgb("#A7C987"), this.rgb("#77A96B"), this.rgb("#6BA45E"), this.rgb("#8DB878"), this.rgb("#FFFFFF"));
+            case 3:
+                return new ThemePalette("\u4e0a\u5348", false, this.rgb("#EAF7FF"), this.rgb("#D5ECFF"), this.rgb("#FFFFFF"), this.rgb("#F1F9FF"), this.rgb("#163047"), this.rgb("#5A7891"), this.rgb("#8FAAC1"), this.rgb("#3D9CEB"), this.rgb("#7BC7FF"), this.rgb("#2FAE8C"), this.rgb("#D95B68"), this.rgb("#C9E1F2"), this.rgb("#D8EAF7"), this.rgb("#7493AA"), this.rgb("#EDF8FF"), this.rgb("#ECFDF7"), this.rgb("#B8E7D6"), this.rgb("#DCF2FF"), this.rgb("#BFE6FF"), this.rgb("#7BC7FF"), this.rgb("#3D9CEB"), this.rgb("#18A7D8"), this.rgb("#3A8BE0"), this.rgb("#FFFFFF"));
+            case 4:
+                return new ThemePalette("\u6b63\u5348", false, this.rgb("#FFFBE8"), this.rgb("#EAF6FF"), this.rgb("#FFFFFF"), this.rgb("#FBFCF4"), this.rgb("#252A32"), this.rgb("#72746B"), this.rgb("#A3A28D"), this.rgb("#E5B94E"), this.rgb("#58A6FF"), this.rgb("#46A56D"), this.rgb("#D96B59"), this.rgb("#E8DFC2"), this.rgb("#DCEAF4"), this.rgb("#898774"), this.rgb("#FFF9DE"), this.rgb("#F0FAE8"), this.rgb("#D6E8B7"), this.rgb("#FFF5C9"), this.rgb("#DFF2FF"), this.rgb("#E5B94E"), this.rgb("#58A6FF"), this.rgb("#D9A938"), this.rgb("#3F8FE8"), this.rgb("#FFFFFF"));
+            case 5:
+                return new ThemePalette("\u5348\u540e", false, this.rgb("#FFF1DD"), this.rgb("#F6D6B1"), this.rgb("#FFF9F2"), this.rgb("#FDF0E2"), this.rgb("#34251A"), this.rgb("#80624C"), this.rgb("#A88B72"), this.rgb("#D98242"), this.rgb("#B96A3C"), this.rgb("#698F55"), this.rgb("#B85B49"), this.rgb("#E6CFB8"), this.rgb("#EBDAC8"), this.rgb("#9E8068"), this.rgb("#FFF3E6"), this.rgb("#F5F9E9"), this.rgb("#D3E4BD"), this.rgb("#FFE6BD"), this.rgb("#F3C999"), this.rgb("#D98242"), this.rgb("#B96A3C"), this.rgb("#D9793C"), this.rgb("#9A4B2E"), this.rgb("#FFFDF8"));
+            case 6:
+                return new ThemePalette("\u9ec4\u660f", true, this.rgb("#21192B"), this.rgb("#3A2238"), this.rgb("#2B2335"), this.rgb("#342A3E"), this.rgb("#FFF1E8"), this.rgb("#D5B9C6"), this.rgb("#A68EA6"), this.rgb("#D99A73"), this.rgb("#A98BFF"), this.rgb("#7ED4B5"), this.rgb("#F27A92"), this.rgb("#463750"), this.rgb("#55415E"), this.rgb("#D9C0CE"), this.rgb("#372B42"), this.rgb("#263936"), this.rgb("#3F6D63"), this.rgb("#3E2B44"), this.rgb("#2A1F3B"), this.rgb("#D99A73"), this.rgb("#A98BFF"), this.rgb("#D8866F"), this.rgb("#8B76E8"), this.rgb("#FFF8F2"));
+            case 7:
+                return new ThemePalette("\u66ae\u5149", true, this.rgb("#121A33"), this.rgb("#27204A"), this.rgb("#1D2540"), this.rgb("#26304D"), this.rgb("#EEF3FF"), this.rgb("#AEB8D8"), this.rgb("#8794BA"), this.rgb("#7FA6FF"), this.rgb("#C38CFF"), this.rgb("#72D5C7"), this.rgb("#F1859F"), this.rgb("#344063"), this.rgb("#414B70"), this.rgb("#B5C0DE"), this.rgb("#273352"), this.rgb("#1D3842"), this.rgb("#335B6D"), this.rgb("#22305A"), this.rgb("#2C234D"), this.rgb("#7FA6FF"), this.rgb("#C38CFF"), this.rgb("#668CEF"), this.rgb("#A26CF0"), this.rgb("#F5F8FF"));
+            case 8:
+                return new ThemePalette("\u591c\u665a", true, this.rgb("#08111F"), this.rgb("#101D30"), this.rgb("#111C2A"), this.rgb("#172436"), this.rgb("#E8F3FF"), this.rgb("#9BB2C9"), this.rgb("#748AA3"), this.rgb("#5EA8FF"), this.rgb("#7DD3FC"), this.rgb("#65D6B6"), this.rgb("#F1798E"), this.rgb("#24364B"), this.rgb("#30445A"), this.rgb("#A5B8CD"), this.rgb("#17283A"), this.rgb("#123A38"), this.rgb("#245E56"), this.rgb("#162C46"), this.rgb("#0F1B2E"), this.rgb("#5EA8FF"), this.rgb("#7DD3FC"), this.rgb("#4F8FE8"), this.rgb("#56C5E8"), this.rgb("#F6FBFF"));
+            case 9:
+                return new ThemePalette("\u6df1\u591c", true, this.rgb("#050914"), this.rgb("#0B1220"), this.rgb("#101827"), this.rgb("#151F31"), this.rgb("#E6EDFF"), this.rgb("#9CA9C0"), this.rgb("#768399"), this.rgb("#4F7BFF"), this.rgb("#5AD7FF"), this.rgb("#63D2B0"), this.rgb("#ED7F9B"), this.rgb("#202B40"), this.rgb("#2A344B"), this.rgb("#AAB4C7"), this.rgb("#151E2D"), this.rgb("#102F34"), this.rgb("#1D4A51"), this.rgb("#111D34"), this.rgb("#08101E"), this.rgb("#4F7BFF"), this.rgb("#5AD7FF"), this.rgb("#4169E0"), this.rgb("#49BEE8"), this.rgb("#F5F8FF"));
+            default:
+                return new ThemePalette("\u5348\u591c", true, this.rgb("#030712"), this.rgb("#08101C"), this.rgb("#0E1624"), this.rgb("#121C2C"), this.rgb("#DDE7F5"), this.rgb("#909EB0"), this.rgb("#6F7C90"), this.rgb("#9CA3AF"), this.rgb("#60A5FA"), this.rgb("#67D6B6"), this.rgb("#E4819B"), this.rgb("#1E293B"), this.rgb("#273449"), this.rgb("#A3AFBF"), this.rgb("#121C2C"), this.rgb("#0D2B30"), this.rgb("#1D464C"), this.rgb("#0F1A2B"), this.rgb("#08111F"), this.rgb("#9CA3AF"), this.rgb("#60A5FA"), this.rgb("#7E8EA5"), this.rgb("#4E8EE8"), this.rgb("#F2F6FF"));
+        }
+    }
+
+    private int timeflowSlot() {
+        int hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
+        if (hour >= 4 && hour < 6) return 0;
+        if (hour >= 6 && hour < 8) return 1;
+        if (hour >= 8 && hour < 10) return 2;
+        if (hour >= 10 && hour < 12) return 3;
+        if (hour >= 12 && hour < 13) return 4;
+        if (hour >= 13 && hour < 16) return 5;
+        if (hour >= 16 && hour < 18) return 6;
+        if (hour >= 18 && hour < 20) return 7;
+        if (hour >= 20 && hour < 22) return 8;
+        if (hour >= 22) return 9;
+        return 10;
     }
 
     private Drawable screenBackground() {
@@ -2143,6 +2216,9 @@ TrafficRunnerService.Listener {
             case 15: {
                 return "\u9152\u7ea2\u9ed1";
             }
+            case TIMEFLOW_THEME_ID: {
+                return "\u65f6\u666f\u6d41\u8f6c";
+            }
         }
         return "\u51b0\u5ddd\u84dd";
     }
@@ -2196,6 +2272,9 @@ TrafficRunnerService.Listener {
             }
             case 15: {
                 return "\u4f4e\u9971\u548c\u9152\u7ea2\u5f3a\u8c03\uff0c\u6210\u719f\u514b\u5236";
+            }
+            case TIMEFLOW_THEME_ID: {
+                return "\u6839\u636e\u672c\u5730\u65f6\u95f4\u5728\u9ece\u660e\u3001\u65e5\u51fa\u3001\u6e05\u6668\u3001\u5348\u540e\u3001\u66ae\u5149\u548c\u591c\u8272\u95f4\u81ea\u52a8\u5207\u6362";
             }
         }
         return "\u9ed8\u8ba4\u51b0\u5ddd\u84dd\u4e3b\u9898";
