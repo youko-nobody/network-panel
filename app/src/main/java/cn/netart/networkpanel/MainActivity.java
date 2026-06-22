@@ -685,7 +685,7 @@ TrafficRunnerService.Listener {
         panel.setBackground(this.panelBackground());
         scroll.addView((View)panel, (ViewGroup.LayoutParams)new FrameLayout.LayoutParams(-1, -2));
         AlertDialog[] dialogRef = new AlertDialog[1];
-        for (int i = 0; i < AppPrefs.THEME_COUNT; ++i) {
+        for (int i = 0; i <= TIMEFLOW_THEME_ID; ++i) {
             int themeId = i;
             panel.addView(this.choiceRow(this.themeChoiceName(i), this.themeChoiceDesc(i), i == this.currentThemeId, v -> {
                 if (dialogRef[0] != null) {
@@ -696,6 +696,42 @@ TrafficRunnerService.Listener {
                     this.recreate();
                 }
             }), (ViewGroup.LayoutParams)this.topMargin(i == 0 ? 0 : 8));
+        }
+        String fixedDetail = this.isTimeflowFixedTheme(this.currentThemeId) ? this.themeChoiceName(this.currentThemeId) + " \u00b7 \u56fa\u5b9a\u5c0f\u65f6\u914d\u8272" : "\u9009\u62e9 00-23 \u5c0f\u65f6\u56fa\u5b9a\u914d\u8272";
+        panel.addView(this.choiceRow("\u65f6\u666f\u624b\u52a8", fixedDetail, this.isTimeflowFixedTheme(this.currentThemeId), v -> {
+            if (dialogRef[0] != null) {
+                dialogRef[0].dismiss();
+            }
+            this.handler.post(() -> this.showTimeflowFixedChooser());
+        }), (ViewGroup.LayoutParams)this.topMargin(8));
+        dialogRef[0] = dialog = new AlertDialog.Builder((Context)this).setView((View)scroll).show();
+        Window window = dialog.getWindow();
+        if (window != null) {
+            window.setBackgroundDrawable((Drawable)new ColorDrawable(0));
+        }
+    }
+
+    private void showTimeflowFixedChooser() {
+        AlertDialog dialog;
+        ScrollView scroll = new ScrollView((Context)this);
+        scroll.setFillViewport(false);
+        scroll.setBackground(this.panelBackground());
+        LinearLayout panel = this.vertical();
+        panel.setPadding(this.dp(16), this.dp(10), this.dp(16), this.dp(16));
+        panel.setBackground(this.panelBackground());
+        scroll.addView((View)panel, (ViewGroup.LayoutParams)new FrameLayout.LayoutParams(-1, -2));
+        AlertDialog[] dialogRef = new AlertDialog[1];
+        for (int slot = 0; slot < TIMEFLOW_FIXED_THEME_COUNT; ++slot) {
+            int themeId = TIMEFLOW_FIXED_THEME_START + slot;
+            panel.addView(this.choiceRow(this.timeflowFixedName(themeId), this.timeflowFixedDesc(themeId), themeId == this.currentThemeId, v -> {
+                if (dialogRef[0] != null) {
+                    dialogRef[0].dismiss();
+                }
+                if (themeId != this.currentThemeId) {
+                    AppPrefs.writeTheme((Context)this, themeId);
+                    this.recreate();
+                }
+            }), (ViewGroup.LayoutParams)this.topMargin(slot == 0 ? 0 : 8));
         }
         dialogRef[0] = dialog = new AlertDialog.Builder((Context)this).setView((View)scroll).show();
         Window window = dialog.getWindow();
@@ -1973,7 +2009,8 @@ TrafficRunnerService.Listener {
     }
 
     private void cycleTheme() {
-        AppPrefs.writeTheme((Context)this, (this.currentThemeId + 1) % AppPrefs.THEME_COUNT);
+        int nextTheme = this.isTimeflowFixedTheme(this.currentThemeId) || this.currentThemeId >= TIMEFLOW_THEME_ID ? 0 : this.currentThemeId + 1;
+        AppPrefs.writeTheme((Context)this, nextTheme);
         this.recreate();
     }
 
