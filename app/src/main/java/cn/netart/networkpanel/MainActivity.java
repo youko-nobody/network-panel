@@ -75,6 +75,8 @@ implements SpeedTestEngine.Listener,
 TrafficRunnerService.Listener {
     private static final int REQ_NOTIFICATIONS = 41;
     private static final int TIMEFLOW_THEME_ID = 16;
+    private static final int TIMEFLOW_FIXED_THEME_START = 17;
+    private static final int TIMEFLOW_FIXED_THEME_COUNT = 24;
     private static final Pattern HTTP_URL_PATTERN = Pattern.compile("https?://[^\\s，,|]+", Pattern.CASE_INSENSITIVE);
     private static final Pattern IMPORT_TOKEN_PATTERN = Pattern.compile("[^\\s，,|]+");
     private int TEXT;
@@ -1983,6 +1985,9 @@ TrafficRunnerService.Listener {
     }
 
     private ThemePalette themeFor(int id) {
+        if (this.isTimeflowFixedTheme(id)) {
+            return this.timeflowThemeForSlot(this.timeflowFixedSlot(id));
+        }
         switch (id) {
             case 0: {
                 return new ThemePalette("\u51b0\u5ddd\u84dd", false, this.rgb("#F3FAFF"), this.rgb("#E6F0FF"), this.rgb("#FFFFFF"), this.rgb("#F7FBFF"), this.rgb("#102A43"), this.rgb("#627D98"), this.rgb("#91A9C2"), this.rgb("#2563EB"), this.rgb("#0891B2"), this.rgb("#059669"), this.rgb("#DC2626"), this.rgb("#D8E7F8"), this.rgb("#DCEBFA"), this.rgb("#7289A3"), this.rgb("#EEF7FF"), this.rgb("#F0FDF4"), this.rgb("#BBF7D0"), this.rgb("#DBEAFE"), this.rgb("#E0F2FE"), this.rgb("#3B82F6"), this.rgb("#06B6D4"), this.rgb("#0F766E"), this.rgb("#2563EB"), this.rgb("#FFFFFF"));
@@ -2042,6 +2047,10 @@ TrafficRunnerService.Listener {
     private ThemePalette timeflowTheme() {
         int slot = this.timeflowSlot();
         this.currentTimeflowSlot = slot;
+        return this.timeflowThemeForSlot(slot);
+    }
+
+    private ThemePalette timeflowThemeForSlot(int slot) {
         switch (slot) {
             case 0:
                 return this.timeflowPalette("\u5b50\u591c", true, "#020617", "#08111F", "#0B1220", "#111827", "#E2E8F0", "#94A3B8", "#818CF8", "#38BDF8", "#5EEAD4", "#FB7185", "#1E293B", "#111C2E", "#111D34", "#050B16", "#818CF8", "#38BDF8", "#F8FAFC");
@@ -2100,6 +2109,77 @@ TrafficRunnerService.Listener {
 
     private int timeflowSlot() {
         return Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
+    }
+
+    private boolean isTimeflowFixedTheme(int id) {
+        return id >= TIMEFLOW_FIXED_THEME_START && id < TIMEFLOW_FIXED_THEME_START + TIMEFLOW_FIXED_THEME_COUNT;
+    }
+
+    private int timeflowFixedSlot(int id) {
+        return Math.max(0, Math.min(TIMEFLOW_FIXED_THEME_COUNT - 1, id - TIMEFLOW_FIXED_THEME_START));
+    }
+
+    private String timeflowFixedName(int id) {
+        int slot = this.timeflowFixedSlot(id);
+        return "\u65f6\u666f " + String.format(Locale.US, "%02d", slot) + " " + this.timeflowSlotName(slot);
+    }
+
+    private String timeflowFixedDesc(int id) {
+        int slot = this.timeflowFixedSlot(id);
+        return "\u56fa\u5b9a\u4f7f\u7528 " + String.format(Locale.US, "%02d:00", slot) + " " + this.timeflowSlotName(slot) + " \u914d\u8272\uff0c\u4e0d\u968f\u771f\u5b9e\u65f6\u95f4\u53d8\u5316";
+    }
+
+    private String timeflowSlotName(int slot) {
+        switch (slot) {
+            case 0:
+                return "\u5b50\u591c";
+            case 1:
+                return "\u661f\u6cb3";
+            case 2:
+                return "\u9759\u591c";
+            case 3:
+                return "\u6708\u9690";
+            case 4:
+                return "\u7834\u6653";
+            case 5:
+                return "\u9ece\u660e";
+            case 6:
+                return "\u65e5\u51fa";
+            case 7:
+                return "\u6668\u5149";
+            case 8:
+                return "\u6e05\u6668";
+            case 9:
+                return "\u9752\u6668";
+            case 10:
+                return "\u6674\u7a7a";
+            case 11:
+                return "\u660e\u663c";
+            case 12:
+                return "\u6b63\u5348";
+            case 13:
+                return "\u91d1\u5348";
+            case 14:
+                return "\u5348\u540e";
+            case 15:
+                return "\u6696\u9633";
+            case 16:
+                return "\u659c\u9633";
+            case 17:
+                return "\u9ec4\u660f";
+            case 18:
+                return "\u66ae\u5149";
+            case 19:
+                return "\u84dd\u66ae";
+            case 20:
+                return "\u591c\u84dd";
+            case 21:
+                return "\u6df1\u84dd";
+            case 22:
+                return "\u6df1\u591c";
+            default:
+                return "\u5348\u591c";
+        }
     }
 
     private Drawable screenBackground() {
@@ -2186,6 +2266,9 @@ TrafficRunnerService.Listener {
     }
 
     private String themeChoiceName(int id) {
+        if (this.isTimeflowFixedTheme(id)) {
+            return this.timeflowFixedName(id);
+        }
         switch (id) {
             case 0: {
                 return "\u51b0\u5ddd\u84dd";
@@ -2243,6 +2326,9 @@ TrafficRunnerService.Listener {
     }
 
     private String themeChoiceDesc(int id) {
+        if (this.isTimeflowFixedTheme(id)) {
+            return this.timeflowFixedDesc(id);
+        }
         switch (id) {
             case 0: {
                 return "\u9ed8\u8ba4\u51b0\u84dd\u4e3b\u9898\uff0c\u6e05\u723d\u901a\u900f";
