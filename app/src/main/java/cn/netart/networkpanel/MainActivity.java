@@ -1989,8 +1989,12 @@ TrafficRunnerService.Listener {
 
     private void configureWindow() {
         if (Build.VERSION.SDK_INT >= 21) {
-            this.getWindow().setStatusBarColor(0);
+            this.getWindow().setStatusBarColor(this.theme.backgroundTop);
             this.getWindow().setNavigationBarColor(this.theme.backgroundBottom);
+        }
+        if (Build.VERSION.SDK_INT >= 29) {
+            this.getWindow().setStatusBarContrastEnforced(false);
+            this.getWindow().setNavigationBarContrastEnforced(false);
         }
         if (Build.VERSION.SDK_INT >= 23) {
             int flags = this.getWindow().getDecorView().getSystemUiVisibility();
