@@ -71,6 +71,7 @@ public class TrafficRunnerService extends Service {
                 if (limitBytes > 0 && SESSION_BYTES.get() >= limitBytes) {
                     message = "已达到流量上限";
                     stopWorkers(false);
+                    return;
                 }
                 handler.postDelayed(this, 1000L);
             }
@@ -174,6 +175,13 @@ public class TrafficRunnerService extends Service {
         super.onDestroy();
     }
 
+    @Override
+    public void onTimeout(int type, int reason) {
+        message = "\u7cfb\u7edf\u5df2\u6682\u505c\u540e\u53f0\u8fd0\u884c";
+        stopWorkers(true);
+        stopSelf();
+    }
+
     private void startRunning() {
         if (RUNNING.get()) {
             return;
@@ -186,6 +194,10 @@ public class TrafficRunnerService extends Service {
             return;
         }
 
+        long configuredLimitBytes = TrafficPrefs.readLimitMb(this) <= 0 ? 0L : TrafficPrefs.readLimitMb(this) * 1024L * 1024L;
+        if (configuredLimitBytes > 0 && SESSION_BYTES.get() >= configuredLimitBytes) {
+            SESSION_BYTES.set(0);
+        }
         int runId = RUN_ID.incrementAndGet();
         long sessionStart = SESSION_BYTES.get();
         RUNNING.set(true);
@@ -198,7 +210,7 @@ public class TrafficRunnerService extends Service {
         lastBytes = sessionStart;
         lastPersistBytes = sessionStart;
         lastRateTime = System.currentTimeMillis();
-        limitBytes = TrafficPrefs.readLimitMb(this) <= 0 ? 0L : TrafficPrefs.readLimitMb(this) * 1024L * 1024L;
+        limitBytes = configuredLimitBytes;
         int rateLimitMbps = TrafficPrefs.readRateLimitMbps(this);
         rateLimitBytesPerSecond = rateLimitMbps <= 0 ? 0L : rateLimitMbps * 1_000_000L / 8L;
         resetRateLimiter();

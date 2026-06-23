@@ -178,6 +178,7 @@ TrafficRunnerService.Listener {
         super.onResume();
         this.applyWakeFlag(true);
         TrafficRunnerService.addListener(this);
+        this.syncTrafficState();
         this.refreshRateLimitLabel();
         this.handler.post(this.latencyRefreshRunnable);
         this.startTimeflowWatcher();
@@ -331,7 +332,7 @@ TrafficRunnerService.Listener {
         this.updateMetric(this.trafficRateMbpsText, "-- Mbps");
         this.updateMetric(this.trafficWorkersText, this.currentThreads() + " \u7ebf\u7a0b");
         this.updateMetric(this.routeSummaryText, this.currentRouteName());
-        this.updateStartButtonState(false);
+        this.syncTrafficState();
         return panel;
     }
 
@@ -911,8 +912,15 @@ TrafficRunnerService.Listener {
         this.applyWakeFlag(true);
     }
 
+    private void syncTrafficState() {
+        this.onTrafficUpdate(TrafficRunnerService.currentState((Context)this));
+    }
+
     private void toggleTraffic() {
-        if (this.trafficRunning) {
+        TrafficStatsState state = TrafficRunnerService.currentState((Context)this);
+        this.trafficRunning = state.running;
+        this.updateStartButtonState(state.running);
+        if (state.running) {
             this.service("cn.netart.networkpanel.TRAFFIC_PAUSE");
             this.appendLog("\u5df2\u6682\u505c\u6d41\u91cf\u4efb\u52a1");
             return;
