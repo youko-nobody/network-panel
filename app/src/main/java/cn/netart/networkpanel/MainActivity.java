@@ -757,13 +757,7 @@ TrafficRunnerService.Listener {
         for (int i = 0; i < this.targets.size(); ++i) {
             TrafficTarget target = this.targets.get(i);
             int index = i;
-            String detail = target.threads + " \u7ebf\u7a0b";
-            if (target.enhanced) {
-                detail = detail + " \u00b7 \u589e\u5f3a\u5e76\u53d1";
-            }
-            if (!target.enabled) {
-                detail = detail + " \u00b7 \u505c\u7528";
-            }
+            String detail = target.enabled ? "\u542f\u7528" : "\u505c\u7528";
             panel.addView(this.choiceRow(target.displayName(), detail, i == this.activeTargetIndex, v -> {
                 if (dialogRef[0] != null) {
                     dialogRef[0].dismiss();
@@ -895,8 +889,8 @@ TrafficRunnerService.Listener {
         Button speed = this.actionButton("\u6d4b\u8bd5\u5f53\u524d\u7ebf\u8def", true);
         panel.addView((View)speed, (ViewGroup.LayoutParams)this.topMargin(12));
         speed.setOnClickListener(v -> {
-            TrafficTarget target = this.targets.isEmpty() ? new TrafficTarget("\u9ed8\u8ba4\u6d4b\u901f", "https://speed.cloudflare.com/__down?bytes=100000000", 4, true, true) : this.targets.get(TrafficPrefs.readActiveIndex((Context)this, this.targets.size()));
-            this.settings = new AppPrefs.Settings(target.url, "https://speed.cloudflare.com/__up", Math.max(1, Math.min(8, target.threads)), 10, this.isKeepAwakeEnabled(), this.isNotificationEnabled());
+            TrafficTarget target = this.targets.isEmpty() ? new TrafficTarget("\u9ed8\u8ba4\u6d4b\u901f", "https://speed.cloudflare.com/__down?bytes=100000000", true, true) : this.targets.get(TrafficPrefs.readActiveIndex((Context)this, this.targets.size()));
+            this.settings = new AppPrefs.Settings(target.url, "https://speed.cloudflare.com/__up", Math.max(1, Math.min(8, this.currentThreads())), 10, this.isKeepAwakeEnabled(), this.isNotificationEnabled());
             this.phaseText.setText((CharSequence)"\u51c6\u5907\u4e2d");
             this.progressBar.setProgress(0);
             this.appendLog("\u4f7f\u7528\u5f53\u524d\u7ebf\u8def\u6d4b\u901f\uff1a" + target.displayName());
@@ -907,7 +901,8 @@ TrafficRunnerService.Listener {
 
     private void applySavedState() {
         this.activeTargetIndex = TrafficPrefs.readActiveIndex((Context)this, this.targets.size());
-        this.currentThreadValue = this.targets.isEmpty() ? this.currentThreadValue : this.targets.get((int)this.activeTargetIndex).threads;
+        this.currentThreadValue = TrafficPrefs.readThreads((Context)this);
+        TrafficPrefs.writeThreads((Context)this, this.currentThreadValue);
         this.refreshTargetList();
         this.applyWakeFlag(true);
     }
@@ -950,7 +945,6 @@ TrafficRunnerService.Listener {
             return;
         }
         this.activeTargetIndex = Math.max(0, Math.min(this.targets.size() - 1, index));
-        this.currentThreadValue = this.targets.get((int)this.activeTargetIndex).threads;
         TrafficPrefs.writeActiveIndex((Context)this, this.activeTargetIndex);
         this.refreshTargetList();
         this.appendLog("\u5df2\u5207\u6362\u7ebf\u8def\uff1a" + this.targets.get(this.activeTargetIndex).displayName());
@@ -1218,9 +1212,8 @@ TrafficRunnerService.Listener {
             Toast.makeText((Context)this, (CharSequence)"\u8bf7\u8f93\u5165\u94fe\u63a5", (int)0).show();
             return;
         }
-        this.targets.add(new TrafficTarget(this.clean(this.linkNameEdit), url, this.currentThreads(), this.isEnhancedEnabled(), true));
+        this.targets.add(new TrafficTarget(this.clean(this.linkNameEdit), url, this.isEnhancedEnabled(), true));
         this.activeTargetIndex = this.targets.size() - 1;
-        this.currentThreadValue = this.targets.get((int)this.activeTargetIndex).threads;
         TrafficPrefs.writeTargets((Context)this, this.targets);
         TrafficPrefs.writeActiveIndex((Context)this, this.activeTargetIndex);
         this.linkNameEdit.setText((CharSequence)"");
@@ -1321,7 +1314,7 @@ TrafficRunnerService.Listener {
                 ++skipped;
                 continue;
             }
-            this.targets.add(new TrafficTarget(parsed.name, parsed.url, this.currentThreads(), this.isEnhancedEnabled(), true));
+            this.targets.add(new TrafficTarget(parsed.name, parsed.url, this.isEnhancedEnabled(), true));
             knownUrls.add(key);
             if (firstImportedIndex < 0) {
                 firstImportedIndex = this.targets.size() - 1;
@@ -1489,7 +1482,7 @@ TrafficRunnerService.Listener {
             this.refreshTargetSpinner();
         }
         if (this.trafficWorkersText != null) {
-            this.updateMetric(this.trafficWorkersText, this.targets.isEmpty() ? "--" : this.currentThreadValue + " \u7ebf\u7a0b");
+            this.updateMetric(this.trafficWorkersText, this.currentThreads() + " \u7ebf\u7a0b");
         }
         if (this.routeSummaryText != null) {
             this.updateMetric(this.routeSummaryText, this.currentRouteName());
@@ -1502,7 +1495,6 @@ TrafficRunnerService.Listener {
             return;
         }
         this.activeTargetIndex = Math.max(0, Math.min(this.targets.size() - 1, this.activeTargetIndex));
-        this.currentThreadValue = this.targets.get(this.activeTargetIndex).threads;
     }
 
     private View targetRow(final int index) {
@@ -1540,7 +1532,7 @@ TrafficRunnerService.Listener {
         top.addView((View)delete, (ViewGroup.LayoutParams)deleteParams);
         edit.setOnClickListener(v -> this.showEditTargetDialog(index));
         delete.setOnClickListener(v -> this.confirmDeleteTarget(index));
-        String detail = (target.enabled ? "\u542f\u7528" : "\u505c\u7528") + " \u00b7 " + target.threads + "\u7ebf\u7a0b" + (target.enhanced ? " \u00b7 \u589e\u5f3a\u5e76\u53d1" : "");
+        String detail = target.enabled ? "\u542f\u7528" : "\u505c\u7528";
         TextView detailView = this.text(detail, 12, selected ? this.theme.secondary : this.MUTED, 1);
         detailView.setSingleLine(true);
         detailView.setEllipsize(TextUtils.TruncateAt.END);
@@ -1590,7 +1582,7 @@ TrafficRunnerService.Listener {
                 return;
             }
             TrafficTarget old = this.targets.get(index);
-            this.targets.set(index, new TrafficTarget(this.clean(nameEdit), url, old.threads, old.enhanced, old.enabled));
+            this.targets.set(index, new TrafficTarget(this.clean(nameEdit), url, old.enhanced, old.enabled));
             TrafficPrefs.writeTargets((Context)this, this.targets);
             this.refreshTargetList();
             this.appendLog("\u5df2\u7f16\u8f91\u7ebf\u8def\uff1a" + url);
@@ -1782,10 +1774,6 @@ TrafficRunnerService.Listener {
     }
 
     private void showThreadDialog() {
-        if (this.targets.isEmpty()) {
-            Toast.makeText((Context)this, (CharSequence)"\u8bf7\u5148\u6dfb\u52a0\u7ebf\u8def", (int)0).show();
-            return;
-        }
         LinearLayout panel = this.vertical();
         panel.setPadding(0, this.dp(2), 0, 0);
         int current = this.currentThreads();
@@ -1827,18 +1815,13 @@ TrafficRunnerService.Listener {
             public void onStopTrackingTouch(SeekBar seekBar) {
             }
         });
-        this.showActionDialog("\u7ebf\u7a0b\u8bbe\u7f6e", (View)panel, () -> this.updateSelectedTargetThreads(selected[0]));
+        this.showActionDialog("\u7ebf\u7a0b\u8bbe\u7f6e", (View)panel, () -> this.updateGlobalThreads(selected[0]));
     }
 
-    private void updateSelectedTargetThreads(int threads) {
-        if (this.targets.isEmpty()) {
-            return;
-        }
+    private void updateGlobalThreads(int threads) {
         int value = Math.max(1, Math.min(32, threads));
-        TrafficTarget old = this.targets.get(this.activeTargetIndex);
-        this.targets.set(this.activeTargetIndex, new TrafficTarget(old.name, old.url, value, this.isEnhancedEnabled(), old.enabled));
         this.currentThreadValue = value;
-        TrafficPrefs.writeTargets((Context)this, this.targets);
+        TrafficPrefs.writeThreads((Context)this, value);
         this.refreshTargetList();
         this.appendLog("\u7ebf\u7a0b\u8bbe\u7f6e\uff1a" + value + " \u7ebf\u7a0b");
         if (this.trafficRunning) {

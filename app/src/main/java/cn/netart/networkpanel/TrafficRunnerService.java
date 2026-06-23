@@ -217,8 +217,8 @@ public class TrafficRunnerService extends Service {
         updateWakeLock();
 
         executor = Executors.newCachedThreadPool();
+        int threads = TrafficPrefs.readEnhanced(this) ? TrafficPrefs.readThreads(this) : 1;
         for (TrafficTarget target : targets) {
-            int threads = TrafficPrefs.readEnhanced(this) ? Math.max(1, target.threads) : 1;
             for (int i = 0; i < threads; i++) {
                 executor.execute(() -> worker(target, runId));
             }

@@ -14,6 +14,7 @@ final class TrafficPrefs {
     private static final String KEY_TOTAL_BYTES = "total_bytes";
     private static final String KEY_KEEP_AWAKE = "traffic_keep_awake";
     private static final String KEY_ENHANCED = "traffic_enhanced";
+    private static final String KEY_THREADS = "traffic_threads";
     private static final String KEY_ACTIVE_INDEX = "active_index";
 
     private TrafficPrefs() {
@@ -40,9 +41,15 @@ final class TrafficPrefs {
                 targets.add(new TrafficTarget(
                         decode(parts[0]),
                         decode(parts[1]),
-                        clamp(parseInt(parts[2], 4), 1, 32),
                         "1".equals(parts[3]),
                         "1".equals(parts[4])
+                ));
+            } else if (parts.length >= 4) {
+                targets.add(new TrafficTarget(
+                        decode(parts[0]),
+                        decode(parts[1]),
+                        "1".equals(parts[2]),
+                        "1".equals(parts[3])
                 ));
             }
         }
@@ -57,11 +64,33 @@ final class TrafficPrefs {
             }
             builder.append(encode(target.name)).append('\t')
                     .append(encode(target.url)).append('\t')
-                    .append(clamp(target.threads, 1, 32)).append('\t')
                     .append(target.enhanced ? "1" : "0").append('\t')
                     .append(target.enabled ? "1" : "0");
         }
         open(context).edit().putString(KEY_TARGETS, builder.toString()).commit();
+    }
+
+    static int readThreads(Context context) {
+        SharedPreferences prefs = open(context);
+        if (prefs.contains(KEY_THREADS)) {
+            return clamp(prefs.getInt(KEY_THREADS, 4), 1, 32);
+        }
+        String raw = prefs.getString(KEY_TARGETS, "");
+        if (raw != null && !raw.trim().isEmpty()) {
+            String[] lines = raw.split("\\n");
+            int index = readActiveIndex(context, lines.length);
+            if (index >= 0 && index < lines.length) {
+                String[] parts = lines[index].split("\\t", -1);
+                if (parts.length >= 5) {
+                    return clamp(parseInt(parts[2], 4), 1, 32);
+                }
+            }
+        }
+        return 4;
+    }
+
+    static void writeThreads(Context context, int threads) {
+        open(context).edit().putInt(KEY_THREADS, clamp(threads, 1, 32)).apply();
     }
 
     static int readLimitMb(Context context) {
