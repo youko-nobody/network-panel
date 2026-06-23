@@ -20,8 +20,8 @@ android {
         applicationId "cn.netart.networkpanel"
         minSdk 23
         targetSdk 34
-        versionCode 18
-        versionName "1.0.17"
+        versionCode 19
+        versionName "1.0.18"
     }
 
     signingConfigs {
